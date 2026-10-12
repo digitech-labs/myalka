@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Alka - Portal Integrasi & Admin</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { blue: '#2878F0', navy: '#0f172a', muted: '#64748b' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --shadow-glass: 0 10px 40px -10px rgba(0,0,0,0.08);
+            --inset-glass: inset 0 1px 0 rgba(255,255,255,0.8), inset 1px 0 0 rgba(255,255,255,0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif; color: theme('colors.brand.navy');
+            background-color: #f8fafc;
+            background-image: radial-gradient(ellipse at 0% 0%, #cde8fb 0%, transparent 60%), radial-gradient(ellipse at 100% 0%, #ffe0cc 0%, transparent 60%), radial-gradient(ellipse at 100% 100%, #fff5e6 0%, transparent 60%), radial-gradient(ellipse at 0% 100%, #dcf0ff 0%, transparent 60%);
+            background-attachment: fixed; min-height: 100vh; min-height: 100dvh;
+            overflow: hidden; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* WATER GLASS EFFECT */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.9); border-left: 1.5px solid rgba(255, 255, 255, 0.7);
+            border-right: 1px solid rgba(255, 255, 255, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow-glass), var(--inset-glass);
+        }
+        .glass-pill {
+            background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border-top: 1px solid rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.7);
+        }
+        .glass-popup { opacity: 0; transform: scale(0.95); pointer-events: none; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .glass-popup.show { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        .slider-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .slider-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+
+        /* Full Width Bottom Nav */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 70px;
+            display: flex; justify-content: space-around; align-items: center; z-index: 50; padding-bottom: env(safe-area-inset-bottom);
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-top: 1px solid rgba(255, 255, 255, 0.9); box-shadow: 0 -10px 30px rgba(0,0,0,0.03);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: theme('colors.brand.muted'); font-size: 11px; font-weight: 600; flex: 1; height: 100%; position: relative; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-item.active { color: theme('colors.brand.blue'); }
+        .nav-item.active i { transform: translateY(-2px) scale(1.15); stroke-width: 2.5px; }
+        .nav-indicator { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 3px; border-radius: 0 0 4px 4px; background-color: theme('colors.brand.blue'); opacity: 0; transition: opacity 0.3s; }
+        .nav-item.active .nav-indicator { opacity: 1; }
+
+        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Form Controls */
+        .input-glass { background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.8); border-radius: 8px; padding: 6px 10px; width: 100%; outline: none; transition: all 0.2s; font-size: 12px; color: #0f172a; }
+        .input-glass:focus { border-color: #3b82f6; background: rgba(255,255,255,0.8); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        
+        /* Modal Overlay */
+        #modal-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.2); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; padding: 20px; }
+        #modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content { animation: modalZoom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        @keyframes modalZoom { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Toast */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); font-size: 13px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Drag & Drop Styles */
+        .draggable-row { transition: background-color 0.2s; }
+        .draggable-row.dragging { opacity: 0.4; background: rgba(59, 130, 246, 0.1); }
+        .draggable-row.drag-over { border-top: 2px solid #3b82f6; }
+        .grip-handle { cursor: grab; user-select: none; }
+        .grip-handle:active { cursor: grabbing; }
+    </style>
+</head>
+<body class="antialiased selection:bg-brand-blue selection:text-white">
+
+    <div id="app-root"></div>
+    <div id="toast-container"></div>
+    <div id="modal-overlay" onclick="closeModal(event)"><div class="modal-content glass-panel rounded-[24px] p-6 flex flex-col" onclick="event.stopPropagation()" id="modal-body"></div></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // 1. CENTRAL DATABASE (STATE MANAGEMENT)
+        // ==========================================
+        window.DB = {
+            menus: [
+                { id: 'home', name: 'Beranda', icon: 'home', hash: '#home', visible: true, order: 1, type: 'iframe', url: 'https://digitech-labs.github.io/ALKAUTSAR-ISLAMIC/' },
+                { id: 'apps', name: 'Aplikasi', icon: 'layout-grid', hash: '#apps', visible: true, order: 2, type: 'container', url: '' },
+                { id: 'psb', name: 'PSB', icon: 'users', hash: '#psb', visible: true, order: 3, type: 'iframe', url: 'https://digitech-labs.github.io/datain/' },
+                { id: 'edukasi', name: 'Edukasi', icon: 'lightbulb', hash: '#edukasi', visible: true, order: 4, type: 'container', url: '' },
+                { id: 'galeri', name: 'Galeri', icon: 'image', hash: '#galeri', visible: true, order: 5, type: 'iframe', url: 'https://digitech-labs.github.io/PRESISI/' }
+            ],
+            apps: [
+                { id: 'alkautsar', name: 'Alkautsar Islamic', section: 'apps', icon: 'layout-dashboard', color: 'text-blue-500', bg: 'bg-blue-100', url: 'https://digitech-labs.github.io/ALKAUTSAR-ISLAMIC/', cat: 'Akademik', status: true, roles: ['Umum'] },
+                { id: 'astaga', name: 'ASTAGA', section: 'apps', icon: 'book-open', color: 'text-purple-500', bg: 'bg-purple-100', url: 'https://digitech-labs.github.io/ASTAGA/', cat: 'Akademik', status: true, roles: ['Pegawai'] },
+                { id: 'gajiq', name: 'Gaji-Q', section: 'apps', icon: 'wallet', color: 'text-green-500', bg: 'bg-green-100', url: 'https://digitech-labs.github.io/Gaji-Q/', cat: 'Keuangan', status: true, roles: ['Pegawai'] },
+                { id: 'datain', name: 'PSB Datain', section: 'apps', icon: 'users', color: 'text-teal-500', bg: 'bg-teal-100', url: 'https://digitech-labs.github.io/datain/', cat: 'Administrasi', status: true, roles: ['Umum'] },
+                { id: 'math-adv', name: 'Math Adventure', section: 'edukasi', icon: 'gamepad-2', color: 'text-orange-500', bg: 'bg-orange-100', url: 'https://digitech-labs.github.io/math/', cat: 'Games Edukasi', status: true, roles: ['Umum'] },
+                { id: 'karya-6a', name: 'Karya Kelas 6A', section: 'edukasi', icon: 'palette', color: 'text-pink-500', bg: 'bg-pink-100', url: 'https://digitech-labs.github.io/karya/', cat: 'Karya Siswa', status: true, roles: ['Umum'] }
+            ],
+            users: [
+                { id: 1, name: 'Salsabila', email: 'salsabila@alka.co.id', role: 'Super Admin', status: true, lastLogin: '10 menit lalu' },
+                { id: 2, name: 'Pegawai A', email: 'pegawai.a@alka.co.id', role: 'Pegawai', status: true, lastLogin: '1 jam lalu' },
+                { id: 3, name: 'Admin B', email: 'admin.b@alka.co.id', role: 'Admin', status: true, lastLogin: '2 jam lalu' },
+                { id: 4, name: 'Rizky Pratama', email: 'rizky@alka.co.id', role: 'Warid', status: false, lastLogin: '7 hari lalu' }
+            ],
+            logs: [
+                { time: '12:00', user: 'Sistem', action: 'Sistem dimulai', target: 'Core', type: 'System', color: 'blue' }
+            ]
+        };
+
+        const NOTIFICATIONS = [
+            { id: 1, title: 'Selamat Datang!', desc: 'My Alka v2.0 terintegrasi.', icon: 'info', color: 'text-blue-500', bg: 'bg-blue-100', target: '#home', read: true }
+        ];
+
+        window.state = {
+            path: window.location.hash || '#home',
+            zoom: 1.0,
+            notifTab: 'semua',
+            isLoggedIn: true,
+            user: window.DB.users[0],
+            searchQueryApp: '',
+            searchQueryUser: '',
+            editingMenuId: null,
+            editingAppId: null
+        };
+
+        const AVAILABLE_COLORS = [
+            { id: 'blue', text: 'text-blue-500', bg: 'bg-blue-100' },
+            { id: 'purple', text: 'text-purple-500', bg: 'bg-purple-100' },
+            { id: 'green', text: 'text-green-500', bg: 'bg-green-100' },
+            { id: 'teal', text: 'text-teal-500', bg: 'bg-teal-100' },
+            { id: 'yellow', text: 'text-yellow-500', bg: 'bg-yellow-100' },
+            { id: 'orange', text: 'text-orange-500', bg: 'bg-orange-100' },
+            { id: 'pink', text: 'text-pink-500', bg: 'bg-pink-100' }
+        ];
+
+        // ==========================================
+        // CLOUD DATABASE INTEGRATION (REALTIME)
+        // ==========================================
+        let cloudDocRef = null;
+        let setDocFn = setDoc; // Store reference to module function
+
+        async function initCloud() {
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'alka-portal-v3';
+                const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+                const firebaseConfig = JSON.parse(configStr);
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                if (!firebaseConfig || !firebaseConfig.projectId) {
+                    console.log("No Cloud Environment: Running Local Mode");
+                    window.render();
+                    return;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const cloudDB = getFirestore(app);
+
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                if (!auth.currentUser) return;
+
+                // STRICT PATH RULE COMPLIANCE: /artifacts/{appId}/public/data/{collectionName}
+                cloudDocRef = doc(cloudDB, 'artifacts', appId, 'public', 'data', 'portal_state', 'master_db');
+
+                // Real-time listener
+                onSnapshot(cloudDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        if (data.menus) window.DB.menus = data.menus;
+                        if (data.apps) window.DB.apps = data.apps;
+                        if (data.users) window.DB.users = data.users;
+                        // For logs, we merge locally to prevent losing fast sequences
+                        
+                        window.render(); // Update UI smoothly when cloud changes
+                    } else {
+                        // First run, seed the database
+                        window.globalSave();
+                    }
+                }, (err) => {
+                    console.error("Cloud Error:", err);
+                });
+
+            } catch (e) {
+                console.error("Gagal inisialisasi cloud, beralih ke lokal:", e);
+                window.render();
+            }
+        }
+
+        window.showToast = function(msg, icon = 'check-circle', color = 'text-green-500') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 ${color}"></i> ${msg}`;
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        window.logActivity = function(action, target, type, color = 'blue') {
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            window.DB.logs.unshift({ time: timeStr, user: window.state.user.name, action, target, type, color });
+            if(window.DB.logs.length > 50) window.DB.logs.pop(); // Keep log size manageable
+        }
+
+        window.openModal = function(htmlContent) {
+            const overlay = document.getElementById('modal-overlay');
+            const body = document.getElementById('modal-body');
+            body.innerHTML = htmlContent;
+            overlay.classList.add('show');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        window.closeModal = function(e) {
+            if(e && e.target.id !== 'modal-overlay' && e.type === 'click') return; 
+            document.getElementById('modal-overlay').classList.remove('show');
+        }
+
+        window.globalSave = async function() {
+            window.showToast('Menyimpan perubahan...', 'cloud-upload', 'text-blue-500');
+            if(cloudDocRef) {
+                try {
+                    await setDocFn(cloudDocRef, {
+                        menus: window.DB.menus,
+                        apps: window.DB.apps,
+                        users: window.DB.users
+                    });
+                    window.showToast('Semua pengaturan berhasil disimpan ke Cloud!', 'cloud-check', 'text-green-500');
+                } catch(e) {
+                    console.error("Gagal simpan:", e);
+                    window.showToast('Gagal terhubung ke Cloud!', 'x-circle', 'text-red-500');
+                }
+            }
+            window.render();
+        }
+
+        let dragSrcEl = null;
+        let dragType = null;
+        let dragId = null;
+
+        window.handleDragStart = function(e, id, type) {
+            dragSrcEl = e.target.closest('.draggable-row');
+            dragType = type;
+            dragId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', id);
+            dragSrcEl.classList.add('dragging');
+        }
+
+        window.handleDragOver = function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const tr = e.target.closest('.draggable-row');
+            if (tr && tr !== dragSrcEl) {
+                tr.classList.add('drag-over');
+            }
+            return false;
+        }
+
+        window.handleDragLeave = function(e) {
+            const tr = e.target.closest('.draggable-row');
+            if (tr) tr.classList.remove('drag-over');
+        }
+
+        window.handleDrop = function(e, targetId, type) {
+            e.stopPropagation();
+            const tr = e.target.closest('.draggable-row');
+            if (tr) tr.classList.remove('drag-over');
+
+            if (dragSrcEl && dragType === type && dragId !== targetId) {
+                let arr = (type === 'menu') ? window.DB.menus : window.DB.apps;
+                const fromIdx = arr.findIndex(item => item.id == dragId);
+                const toIdx = arr.findIndex(item => item.id == targetId);
+
+                if (fromIdx !== -1 && toIdx !== -1) {
+                    const [movedItem] = arr.splice(fromIdx, 1);
+                    arr.splice(toIdx, 0, movedItem);
+
+                    if (type === 'menu') {
+                        arr.forEach((m, idx) => m.order = idx + 1);
+                    }
+
+                    window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue');
+                    window.render();
+                    // Auto-save to cloud on structural changes
+                    if(cloudDocRef) window.globalSave();
+                }
+            }
+            return false;
+        }
+
+        window.handleDragEnd = function(e) {
+            if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+            document.querySelectorAll('.draggable-row').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        window.enableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'true'); }
+        window.disableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'false'); }
+
+
+        window.startEditMenu = function(id) { window.state.editingMenuId = id; window.render(); }
+        window.cancelEditMenu = function() { window.state.editingMenuId = null; window.render(); }
+        
+        window.saveMenuInline = function(id) {
+            const menu = window.DB.menus.find(m => m.id === id);
+            if (menu) {
+                menu.name = document.getElementById(`editMenuName-${id}`).value;
+                menu.icon = document.getElementById(`editMenuIcon-${id}`).value;
+                if (menu.type === 'iframe') {
+                    menu.url = document.getElementById(`editMenuUrl-${id}`).value;
+                }
+                window.logActivity('Mengubah detail menu', menu.name, 'Menu Portal', 'blue');
+                window.showToast('Menu berhasil diperbarui!');
+            }
+            window.state.editingMenuId = null;
+            window.render();
+        }
+
+        window.toggleMenuVisibility = function(id) {
+            const menu = window.DB.menus.find(m => m.id === id);
+            if (menu) {
+                menu.visible = !menu.visible;
+                window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange');
+                window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`);
+                window.render();
+            }
+        }
+
+        window.startEditApp = function(id) { window.state.editingAppId = id; window.render(); }
+        window.cancelEditApp = function() { window.state.editingAppId = null; window.render(); }
+
+        window.toggleUmumInline = function(id) {
+            const isUmum = document.getElementById(`editAppRole-Umum-${id}`).checked;
+            const cbPegawai = document.getElementById(`editAppRole-Pegawai-${id}`);
+            const cbWarid = document.getElementById(`editAppRole-Warid-${id}`);
+            if (isUmum) {
+                cbPegawai.checked = false; cbPegawai.disabled = true;
+                cbWarid.checked = false; cbWarid.disabled = true;
+            } else {
+                cbPegawai.disabled = false; cbWarid.disabled = false;
+            }
+        }
+
+        window.saveAppInline = function(id) {
+            const app = window.DB.apps.find(a => a.id === id);
+            if (app) {
+                app.name = document.getElementById(`editAppName-${id}`).value;
+                app.icon = document.getElementById(`editAppIcon-${id}`).value;
+                app.url = document.getElementById(`editAppUrl-${id}`).value;
+                app.section = document.getElementById(`editAppSection-${id}`).value;
+                
+                const colorVal = document.getElementById(`editAppColor-${id}`).value;
+                const foundColor = AVAILABLE_COLORS.find(c => c.id === colorVal);
+                if(foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; }
+
+                let newRoles = []; 
+                if (document.getElementById(`editAppRole-Umum-${id}`).checked) {
+                    newRoles.push('Umum');
+                } else {
+                    if (document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai');
+                    if (document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid');
+                }
+                app.roles = newRoles;
+
+                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue');
+                window.showToast('Aplikasi berhasil diperbarui!');
+            }
+            window.state.editingAppId = null;
+            window.render();
+        }
+
+        window.toggleAppStatus = function(id) {
+            const app = window.DB.apps.find(a => a.id === id);
+            if (app) {
+                app.status = !app.status;
+                window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
+                window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
+                window.render();
+            }
+        }
+
+        window.toggleUserStatus = function(id) {
+            const user = window.DB.users.find(u => u.id === id);
+            if (user && user.id !== window.state.user.id) {
+                user.status = !user.status;
+                window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red');
+                window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
+                window.render();
+            }
+        }
+
+        window.showAddUserModal = function() {
+            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
+            const roleOptions = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+            const html = `
+                <div class="mb-4">
+                    <h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Pengguna</h2>
+                </div>
+                <form onsubmit="saveNewUser(event)" class="flex flex-col gap-3">
+                    <input type="text" id="userName" required placeholder="Nama Lengkap" class="input-glass">
+                    <select id="userRole" class="input-glass">${roleOptions}</select>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan User</button>
+                    </div>
+                </form>`;
+            window.openModal(html);
+        }
+
+        window.saveNewUser = function(event) {
+            event.preventDefault();
+            const name = document.getElementById('userName').value;
+            const role = document.getElementById('userRole').value;
+            const newUser = { id: Date.now(), name: name, email: name.toLowerCase().replace(/ /g, '') + '@alka.co.id', role: role, status: true, lastLogin: 'Belum pernah' };
+            window.DB.users.unshift(newUser);
+            window.logActivity('Menambahkan pengguna baru', name, 'Pengguna', 'blue');
+            window.showToast('Pengguna berhasil ditambahkan!');
+            window.closeModal();
+            window.render();
+        }
+
+        window.showEditUserModal = function(id) {
+            const user = window.DB.users.find(u => u.id === id);
+            if(!user) return;
+            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
+            const roleOptions = roles.map(r => `<option value="${r}" ${user.role === r ? 'selected' : ''}>${r}</option>`).join('');
+            const html = `
+                <div class="mb-4">
+                    <h2 class="text-xl font-bold text-brand-navy mb-1">Edit Pengguna</h2>
+                </div>
+                <form onsubmit="saveEditUser(event, ${user.id})" class="flex flex-col gap-3">
+                    <input type="text" id="editUserName" required value="${user.name}" class="input-glass">
+                    <select id="editUserRole" class="input-glass">${roleOptions}</select>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan</button>
+                    </div>
+                </form>`;
+            window.openModal(html);
+        }
+
+        window.saveEditUser = function(event, id) {
+            event.preventDefault();
+            const user = window.DB.users.find(u => u.id === id);
+            if(user) {
+                user.name = document.getElementById('editUserName').value;
+                user.role = document.getElementById('editUserRole').value;
+                window.logActivity('Mengubah data pengguna', user.name, 'Pengguna', 'purple');
+                window.showToast('Data berhasil diperbarui!');
+                window.closeModal();
+                window.render();
+            }
+        }
+
+        window.navigate = function(hash) {
+            window.closeAllPopups();
+            window.location.hash = hash;
+            window.state.path = hash;
+            window.state.zoom = 1.0;
+            window.render();
+        }
+
+        window.addEventListener('hashchange', () => {
+            if(window.location.hash !== window.state.path) {
+                window.state.path = window.location.hash || '#home';
+                window.render();
+            }
+        });
+
+        window.togglePopup = function(id, e) {
+            if(e) e.stopPropagation();
+            window.closeAllPopups();
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.toggle('show');
+                if(id.startsWith('notif')) window.renderNotifItems();
+            }
+        }
+
+        window.switchNotifTab = function(tab, e) {
+            if(e) e.stopPropagation();
+            window.state.notifTab = tab;
+            window.renderNotifItems();
+        }
+
+        window.closeAllPopups = function() {
+            document.querySelectorAll('.glass-popup').forEach(el => el.classList.remove('show'));
+            const search = document.getElementById('search-dropdown');
+            if(search) search.classList.add('hidden');
+        }
+        document.addEventListener('click', window.closeAllPopups);
+
+        window.doSearch = function(query) {
+            const dropdown = document.getElementById('search-dropdown');
+            const resultsContainer = document.getElementById('search-results-list');
+            if (!query || query.trim() === '') { dropdown.classList.add('hidden'); return; }
+            dropdown.classList.remove('hidden');
+            const q = query.toLowerCase();
+            const results = window.DB.apps.filter(a => a.status && (a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && (a.name.toLowerCase().includes(q) || a.cat.toLowerCase().includes(q)));
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `<div class="p-4 text-center text-[12px] text-brand-muted">Tidak ada hasil.</div>`;
+                return;
+            }
+            let html = '';
+            results.forEach(app => {
+                html += `<div onclick="navigate('#app-${app.id}')" class="p-3 hover:bg-white/60 cursor-pointer flex items-center gap-3 border-b border-white/20 last:border-0"><div class="w-8 h-8 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div><div><p class="text-[13px] font-bold text-brand-navy mb-0.5">${app.name}</p><p class="text-[10px] text-brand-muted">${app.cat}</p></div></div>`;
+            });
+            resultsContainer.innerHTML = html;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        window.doLogout = function() { window.state.isLoggedIn = false; window.navigate('#login'); }
+        window.doLogin = function() { window.state.isLoggedIn = true; window.navigate('#home'); }
+
+        window.changeZoom = function(delta) {
+            window.state.zoom += delta;
+            if (window.state.zoom < 0.5) window.state.zoom = 0.5;
+            if (window.state.zoom > 1.5) window.state.zoom = 1.5;
+            document.querySelectorAll('.zoom-val').forEach(el => { el.innerText = Math.round(window.state.zoom * 100) + '%'; });
+            const wrapper = document.getElementById('content-zoom-wrapper');
+            if(wrapper) { wrapper.style.transform = `scale(${window.state.zoom})`; wrapper.style.width = `${100 / window.state.zoom}%`; wrapper.style.height = `${100 / window.state.zoom}%`; }
+        }
+
+        const logoSvg = `<svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M50 85C25 85 15 65 15 45C15 25 35 15 50 15C50 15 45 40 50 50C55 60 70 65 85 65C85 75 75 85 50 85Z" fill="url(#paint0_linear)"/><path d="M50 15C75 15 85 35 85 55C85 75 65 85 50 85C50 85 55 60 50 50C45 40 30 35 15 35C15 25 25 15 50 15Z" fill="url(#paint1_linear)"/><defs><linearGradient id="paint0_linear" x1="15" y1="50" x2="60" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient><linearGradient id="paint1_linear" x1="85" y1="50" x2="40" y2="15" gradientUnits="userSpaceOnUse"><stop stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs></svg>`;
+        const logoLargeSvg = logoSvg.replace('width="24" height="24"', 'width="48" height="48"');
+
+        window.getZoomControls = function(isMobile) {
+            return `<div class="glass-pill h-[36px] rounded-full flex items-center shrink-0 px-1 border border-white/80 shadow-sm ${isMobile ? 'ml-auto' : 'mr-4'}"><button onclick="changeZoom(-0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">-</button><span class="zoom-val text-[12px] font-bold text-brand-navy w-[44px] text-center border-x border-white/30">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">+</button></div>`;
+        }
+
+        window.renderNotifItems = function() {
+            const container = document.getElementById('notif-items-container');
+            if(!container) return;
+            const isSemua = window.state.notifTab === 'semua';
+            const filtered = isSemua ? NOTIFICATIONS : NOTIFICATIONS.filter(n => !n.read);
+            let html = '';
+            if (filtered.length === 0) { html = '<p class="text-center text-[11px] text-brand-muted p-4">Tidak ada notifikasi.</p>'; } 
+            else { filtered.forEach(n => { html += `<div onclick="navigate('${n.target}')" class="p-2.5 hover:bg-white/60 rounded-xl cursor-pointer flex gap-3 border border-transparent hover:border-white/50 relative">${!n.read ? '<span class="absolute top-3 right-3 w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}<div class="w-9 h-9 rounded-full ${n.bg} flex shrink-0 items-center justify-center border border-white"><i data-lucide="${n.icon}" class="w-[18px] h-[18px] ${n.color}"></i></div><div class="flex-1 min-w-0 pr-4"><p class="text-[12px] font-bold text-brand-navy mb-0.5">${n.title}</p><p class="text-[10px] text-brand-muted line-clamp-2">${n.desc}</p></div></div>`; }); }
+            container.innerHTML = html;
+            if (window.lucide) lucide.createIcons();
+            const ts = document.getElementById('tab-semua'), tb = document.getElementById('tab-belum');
+            if(ts && tb) { ts.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; tb.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${!isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; }
+        }
+
+        window.getNotifPopupHtml = function(idSuffix) {
+            const unreadCount = NOTIFICATIONS.filter(n=>!n.read).length;
+            return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[280px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/60"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/30"><span class="font-extrabold text-[13px] text-brand-navy">Notifikasi</span>${unreadCount > 0 ? `<span class="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">${unreadCount} Baru</span>` : ''}</div><div class="flex border-b border-white/30 bg-white/40 p-1"><button id="tab-semua" onclick="switchNotifTab('semua', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button id="tab-belum" onclick="switchNotifTab('belum_dibaca', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum Dibaca</button></div><div id="notif-items-container" class="p-2 flex flex-col gap-1 max-h-[280px] overflow-y-auto slider-scroll bg-white/20"></div></div>`;
+        }
+
+        window.getProfilePopupHtml = function(idSuffix) {
+            const userName = window.state.isLoggedIn ? window.state.user.name : 'Pengguna';
+            const userRole = window.state.isLoggedIn ? window.state.user.role : 'Tamu';
+            const adminBtn = (window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin')) ? `<button onclick="navigate('#admin-dashboard')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-50 rounded-xl flex items-center gap-2.5 mt-1 border border-blue-200 bg-white"><i data-lucide="shield-alert" class="w-[18px] h-[18px]"></i> Panel Admin</button>` : '';
+            return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[220px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50"><div class="px-3 py-3 flex items-center gap-3 border-b border-white/40 mb-1 bg-white/30 rounded-t-[16px]"><div class="w-10 h-10 rounded-full border-2 border-white bg-blue-100 overflow-hidden flex items-center justify-center">${window.state.isLoggedIn ? '<img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover">' : '<i data-lucide="user" class="w-5 h-5 text-brand-muted"></i>'}</div><div class="flex-1 min-w-0"><p class="text-[13px] font-bold text-brand-navy truncate">${userName}</p><p class="text-[10px] font-medium text-brand-muted truncate">${userRole}</p></div></div>${adminBtn}<button onclick="navigate('#profil')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-brand-navy hover:bg-white/60 rounded-xl flex items-center gap-2.5 mt-1"><i data-lucide="user-circle" class="w-[18px] h-[18px] text-brand-muted"></i> Profil Saya</button><div class="h-[1px] bg-white/40 my-1 mx-2"></div>${window.state.isLoggedIn ? `<button onclick="doLogout()" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-red-500 hover:bg-red-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-out" class="w-[18px] h-[18px] text-red-400"></i> Keluar</button>` : `<button onclick="navigate('#login')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-500 hover:bg-blue-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-in" class="w-[18px] h-[18px] text-blue-400"></i> Masuk / Login</button>`}</div>`;
+        }
+
+        // ==========================================
+        // RENDER VIEWS (PORTAL)
+        // ==========================================
+        window.renderNativeViews = function(path) {
+            if (path === '#login') {
+                return `<div class="w-full h-full flex items-center justify-center p-5 relative"><div class="glass-panel w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10"><div class="mb-6 scale-110">${logoLargeSvg}</div><h2 class="text-[22px] font-extrabold text-brand-navy mb-2 tracking-tight">Selamat Datang</h2><p class="text-[13px] text-brand-muted mb-8 font-medium">Silakan masuk menggunakan akun My Alka Anda.</p><div class="w-full flex flex-col gap-3 mb-6"><input type="text" placeholder="NIS / NIK / Email" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"><input type="password" placeholder="Kata Sandi" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"></div><button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] py-3.5 rounded-2xl shadow-lg transition-all">Masuk Sekarang</button></div></div>`;
+            }
+            if (path === '#profil') { return `<div class="w-full h-full flex items-center justify-center p-5"><div class="glass-panel p-8 rounded-[32px] text-center"><i data-lucide="wrench" class="w-12 h-12 text-brand-muted mx-auto mb-4"></i><h2 class="text-xl font-bold text-brand-navy">Sedang Dibangun</h2><button onclick="navigate('#apps')" class="mt-4 px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-sm">Kembali</button></div></div>`; }
+
+            let currentFilter = 'apps';
+            if(path === '#edukasi') currentFilter = 'edukasi';
+            
+            const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn || a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && a.section === currentFilter);
+            let appGridHTML = visibleApps.map(app => `<div onclick="navigate('#app-${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none mb-1 truncate">${app.name}</h4><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`).join('');
+
+            return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
+        }
+
+        window.renderPortalLayout = function(isMobile) {
+            const activeMenu = window.DB.menus.find(m => m.hash === window.state.path);
+            const isDirectApp = window.state.path.startsWith('#app-');
+            
+            let isIframe = false;
+            let iframeUrl = null;
+            let currentTitle = 'Portal';
+            let activeAppObj = null;
+
+            if (activeMenu && activeMenu.type === 'iframe') {
+                isIframe = true;
+                iframeUrl = activeMenu.url;
+                currentTitle = activeMenu.name;
+            } else if (isDirectApp) {
+                const app = window.DB.apps.find(a => '#app-'+a.id === window.state.path && a.status);
+                if (app) {
+                    isIframe = true;
+                    iframeUrl = app.url;
+                    currentTitle = app.name;
+                    activeAppObj = app;
+                }
+            }
+
+            let currentSection = 'apps';
+            if (window.state.path === '#edukasi' || (activeAppObj && activeAppObj.section === 'edukasi')) {
+                currentSection = 'edukasi';
+            }
+            
+            const isAppView = window.state.path === '#apps' || window.state.path === '#edukasi' || isDirectApp;
+            const userName = window.state.isLoggedIn ? window.state.user.name : 'Pengguna';
+            
+            const visibleMenus = window.DB.menus.filter(m => m.visible).sort((a,b) => a.order - b.order);
+            const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn || a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && a.section === currentSection);
+
+            let sidebarNav = visibleMenus.map(m => {
+                const isActiveMenu = window.state.path === m.hash || (m.hash === '#apps' && isAppView && currentSection === 'apps') || (m.hash === '#edukasi' && isAppView && currentSection === 'edukasi');
+                return `<a onclick="navigate('${m.hash}')" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] font-semibold text-[13px] transition-all cursor-pointer ${isActiveMenu ? 'bg-white shadow-sm text-brand-blue border border-white/60' : 'text-brand-muted hover:bg-white/40'}"><i data-lucide="${m.icon}" class="w-4 h-4"></i> ${m.name}</a>`;
+            }).join('');
+            
+            let appListHTML = '';
+            [...new Set(visibleApps.map(a => a.cat))].forEach(cat => {
+                appListHTML += `<div class="text-[10px] font-bold text-brand-muted uppercase tracking-wider mb-2 mt-3 px-1">${cat}</div>`;
+                visibleApps.filter(a => a.cat === cat).forEach(app => {
+                    const isCurrentApp = window.state.path === '#app-' + app.id;
+                    appListHTML += `<div onclick="navigate('#app-${app.id}')" class="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-colors mb-1 ${isCurrentApp ? 'bg-white/70 shadow-sm border border-white' : 'hover:bg-white/50 border border-transparent'}"><div class="w-7 h-7 rounded-[8px] ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-3.5 h-3.5 ${app.color}"></i></div><div class="flex-1 min-w-0"><h4 class="text-[11px] font-bold ${isCurrentApp ? 'text-brand-blue' : 'text-brand-navy'} leading-none truncate">${app.name}</h4></div></div>`;
+                });
+            });
+
+            let bottomNavHtml = visibleMenus.map(m => {
+                const isActiveMenu = window.state.path === m.hash || (m.hash === '#apps' && isAppView && currentSection === 'apps') || (m.hash === '#edukasi' && isAppView && currentSection === 'edukasi');
+                return `<a onclick="navigate('${m.hash}')" class="nav-item ${isActiveMenu ? 'active' : ''}"><div class="nav-indicator"></div><i data-lucide="${m.icon}" class="w-5 h-5"></i><span class="text-[10px]">${m.name}</span></a>`;
+            }).join('');
+
+            return `
+            <div class="flex h-[100dvh] w-full overflow-hidden relative">
+                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="scale-90 origin-left">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav></aside>` : ''}
+                
+                <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile && !isDirectApp && window.state.path !== '#login' ? 'pb-[70px]' : ''}">
+                    ${isMobile ? `
+                    <header class="h-[56px] flex items-center justify-between px-4 shrink-0 z-30 sticky top-0 ${isDirectApp ? 'bg-white/40 backdrop-blur-xl border-b border-white/50' : 'bg-transparent pt-2'} w-full">
+                        ${isDirectApp ? `<button onclick="navigate('#${currentSection}')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px] glass-pill px-3 py-1.5 rounded-full shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i> Aplikasi</button><span class="ml-3 font-bold text-[13px] text-brand-navy truncate">${currentTitle}</span>${window.getZoomControls(true)}` 
+                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center">${window.state.isLoggedIn ? '<img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover">' : '<i data-lucide="user" class="w-5 h-5"></i>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">Halo,</span><span class="text-[14px] font-bold text-brand-navy leading-none truncate">${userName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div><button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
+                    </header>` : `
+                    <header class="h-[60px] flex items-center px-6 shrink-0 z-30 bg-transparent w-full relative">
+                        ${isIframe ? window.getZoomControls(false) : ''}
+                        <div class="relative w-full max-w-[320px] ${isIframe ? 'ml-4' : ''}">
+                            <div class="glass-pill w-full h-[36px] rounded-full flex items-center px-4 border border-white/80 shadow-sm"><i data-lucide="search" class="w-[16px] h-[16px] text-brand-muted mr-2"></i><input type="text" oninput="doSearch(this.value)" placeholder="Cari aplikasi..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div>
+                            <div id="search-dropdown" class="hidden absolute top-[calc(100%+8px)] left-0 right-0 glass-panel rounded-2xl shadow-xl border border-white/60 overflow-hidden z-50"><div class="px-4 py-2 border-b border-white/30 bg-white/20"><span class="text-[11px] font-bold text-brand-muted uppercase">Hasil</span></div><div id="search-results-list" class="max-h-[300px] overflow-y-auto slider-scroll flex flex-col bg-white/10 p-1"></div></div>
+                        </div>
+                        <div class="flex items-center gap-3 ml-auto relative">
+                            <div class="relative"><button onclick="togglePopup('notif-popup-desktop', event)" class="w-[36px] h-[36px] rounded-full glass-pill flex justify-center items-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="absolute top-[8px] right-[9px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-desktop')}</div>
+                            <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[36px] pl-1 pr-3 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white">${window.state.isLoggedIn ? '<img src="https://i.pravatar.cc/150?img=32" class="w-full h-full">' : '<i data-lucide="user" class="w-3 h-3 text-brand-muted mx-auto mt-2"></i>'}</div><div class="flex flex-col text-left"><span class="text-[9px] font-bold text-brand-navy truncate max-w-[80px]">${userName}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
+                        </div>
+                    </header>`}
+                    
+                    <div class="flex-1 flex overflow-hidden relative w-full">
+                        ${!isMobile && isAppView ? `<aside class="w-[190px] shrink-0 bg-white/30 backdrop-blur-xl z-30 border-r border-white/40 flex flex-col"><div class="px-3 py-3 border-b border-white/30 mt-1"><h2 class="text-[13px] font-extrabold text-brand-navy ml-1">${currentSection === 'edukasi' ? 'Karya & Edukasi' : 'Daftar Aplikasi'}</h2></div><div class="flex-1 overflow-y-auto slider-scroll p-2">${appListHTML}</div></aside>` : ''}
+                        <main class="flex-1 w-full relative h-full overflow-hidden flex flex-col">
+                            <div id="content-zoom-wrapper" class="w-full h-full flex flex-col bg-white/10" style="transform: scale(${window.state.zoom}); width: ${100 / window.state.zoom}%; height: ${100 / window.state.zoom}%;">
+                                ${isIframe && iframeUrl ? `<div class="w-full h-full flex-1 bg-white"><iframe src="${iframeUrl}" class="w-full h-full border-0 block" allowfullscreen></iframe></div>` : window.renderNativeViews(window.state.path)}
+                            </div>
+                        </main>
+                    </div>
+                </div>
+                ${isMobile && !isDirectApp && window.state.path !== '#login' ? `<nav class="bottom-nav">${bottomNavHtml}</nav>` : ''}
+            </div>`;
+        }
+
+        // ==========================================
+        // RENDER VIEWS (ADMIN PANELS)
+        // ==========================================
+        const ADMIN_MENUS = [
+            { id: 'dashboard', name: 'Dashboard', icon: 'home', hash: '#admin-dashboard' },
+            { id: 'menu-apps', name: 'Menu & Aplikasi', icon: 'layers', hash: '#admin-menu-apps' },
+            { id: 'users', name: 'Pengguna', icon: 'users', hash: '#admin-users' },
+            { id: 'logs', name: 'Log Aktivitas', icon: 'clock', hash: '#admin-logs' }
+        ];
+
+        window.getAdminSidebarLinks = function() { return ADMIN_MENUS.map(m => `<a onclick="navigate('${m.hash}')" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] font-bold text-[12px] transition-all cursor-pointer ${window.state.path === m.hash ? 'bg-blue-500 shadow-md text-white' : 'text-brand-muted hover:bg-white/60'}"><i data-lucide="${m.icon}" class="w-4 h-4"></i> ${m.name}</a>`).join(''); }
+        window.getAdminMobileNavLinks = function() { return ADMIN_MENUS.map(m => `<a onclick="navigate('${m.hash}')" class="nav-item ${window.state.path === m.hash ? 'active' : ''}"><div class="nav-indicator"></div><i data-lucide="${m.icon}" class="w-5 h-5"></i><span class="text-[10px]">${m.name}</span></a>`).join(''); }
+
+        window.renderAdminDashboard = function() {
+            const stats = [ { title: 'Aplikasi Aktif', val: window.DB.apps.filter(a=>a.status).length, icon: 'check-circle', color: 'green' }, { title: 'Total Pengguna', val: window.DB.users.length, icon: 'users', color: 'purple' }, { title: 'Halaman Portal', val: window.DB.menus.length, icon: 'menu', color: 'orange' } ];
+            const statCards = stats.map(s => `<div class="glass-panel p-5 rounded-[20px] flex flex-col relative overflow-hidden"><div class="flex items-center justify-between mb-4"><div class="w-10 h-10 rounded-xl bg-${s.color}-100 flex items-center justify-center text-${s.color}-500"><i data-lucide="${s.icon}" class="w-5 h-5"></i></div><span class="text-[24px] font-extrabold text-brand-navy">${s.val}</span></div><span class="text-[12px] font-bold text-brand-muted">${s.title}</span></div>`).join('');
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><h1 class="text-[20px] font-extrabold text-brand-navy mb-5">Pusat Kendali Admin</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">${statCards}</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aksi Cepat</h3></div><div class="grid grid-cols-2 gap-3">${ADMIN_MENUS.map(m => `<button onclick="navigate('${m.hash}')" class="p-3 bg-white/40 hover:bg-white/70 border border-white/50 rounded-[14px] flex flex-col items-start gap-2.5 transition-colors text-left"><div class="w-7 h-7 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4"></i></div><span class="text-[12px] font-bold text-brand-navy">${m.name}</span></button>`).join('')}</div></div><div class="glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div><div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div></div></div></div>`;
+        }
+
+        window.triggerAppSearch = function(val) { window.state.searchQueryApp = val.toLowerCase(); window.render(); }
+        
+        window.renderAdminMenuApps = function() {
+            const rowsMenu = window.DB.menus.sort((a,b) => a.order - b.order).map(m => {
+                if(window.state.editingMenuId === m.id) {
+                    return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white/80 flex items-center justify-center text-brand-muted"><i data-lucide="grip-vertical" class="w-4 h-4"></i></div><span class="text-[11px] font-bold ml-1">${m.order}</span></div></td><td class="py-2.5 px-3"><input type="text" id="editMenuName-${m.id}" value="${m.name}" class="input-glass font-bold"></td><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-3 h-3 text-blue-500"></i></div><input type="text" id="editMenuIcon-${m.id}" value="${m.icon}" class="input-glass w-24"></div></td><td class="py-2.5 px-3"><input type="url" id="editMenuUrl-${m.id}" value="${m.url || ''}" ${m.type !== 'iframe' ? 'disabled placeholder="Grup Aplikasi"' : ''} class="input-glass min-w-[200px]"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit Mode</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveMenuInline('${m.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditMenu()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
+                } else {
+                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors"
+                        ondragstart="handleDragStart(event, '${m.id}', 'menu')"
+                        ondragover="return handleDragOver(event)"
+                        ondragleave="handleDragLeave(event)"
+                        ondrop="return handleDrop(event, '${m.id}', 'menu')"
+                        ondragend="handleDragEnd(event)">
+                        <td class="py-3 px-3">
+                            <div class="flex items-center gap-2">
+                                <div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div>
+                                <span class="text-[12px] font-bold">${m.order}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 font-bold text-[13px] text-brand-navy">${m.name}</td>
+                        <td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4 text-blue-500"></i></div><span class="text-[11px] font-bold text-brand-muted hidden md:inline">${m.icon}</span></div></td>
+                        <td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[250px]" title="${m.url}">${m.type === 'iframe' ? `<a href="${m.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${m.url}</a>` : 'Grup (Kumpulan Aplikasi)'}</div></td>
+                        <td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${m.visible ? 'checked' : ''} onchange="toggleMenuVisibility('${m.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td>
+                        <td class="py-3 px-3 text-right"><button onclick="startEditMenu('${m.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td>
+                    </tr>`;
+                }
+            }).join('');
+            
+            const filteredApps = window.DB.apps.filter(a => a.name.toLowerCase().includes(window.state.searchQueryApp) || a.cat.toLowerCase().includes(window.state.searchQueryApp));
+            
+            const generateAppRows = (appsList, typeKey) => {
+                return appsList.map(app => {
+                    const isUmum = app.roles.includes('Umum');
+                    const isPegawai = app.roles.includes('Pegawai');
+                    const isWarid = app.roles.includes('Warid');
+                    
+                    if(window.state.editingAppId === app.id) {
+                        const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+                        return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-16 px-1"></div></td><td class="py-2.5 px-3"><input type="text" id="editAppName-${app.id}" value="${app.name}" class="input-glass font-bold w-full min-w-[100px] mb-1"><select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1"><option value="apps" ${app.section === 'apps' ? 'selected' : ''}>Laci Aplikasi</option><option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Laci Edukasi</option></select></td><td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass text-[10px] w-full min-w-[150px]"></td><td class="py-2.5 px-3"><select id="editAppColor-${app.id}" class="input-glass text-[11px] p-1">${colorOptions}</select></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Umum-${app.id}" ${isUmum ? 'checked' : ''} onchange="toggleUmumInline('${app.id}')" class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Pegawai-${app.id}" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Warid-${app.id}" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveAppInline('${app.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditApp()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm border border-white"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
+                    } else {
+                        return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors"
+                            ondragstart="handleDragStart(event, '${app.id}', '${typeKey}')"
+                            ondragover="return handleDragOver(event)"
+                            ondragleave="handleDragLeave(event)"
+                            ondrop="return handleDrop(event, '${app.id}', '${typeKey}')"
+                            ondragend="handleDragEnd(event)">
+                            <td class="py-3 px-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div>
+                                    <div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3"><div class="font-bold text-[13px] text-brand-navy">${app.name}</div><div class="text-[9px] text-brand-muted">${app.cat}</div></td>
+                            <td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[200px]" title="${app.url}"><a href="${app.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${app.url}</a></div></td>
+                            <td class="py-3 px-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${app.bg} ${app.color} border border-white capitalize">${app.color.replace('text-','').replace('-500','')}</span></td>
+                            <td class="py-3 px-3 text-center">${isUmum ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
+                            <td class="py-3 px-3 text-center">${isPegawai ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
+                            <td class="py-3 px-3 text-center">${isWarid ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
+                            <td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${app.status ? 'checked' : ''} onchange="toggleAppStatus('${app.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td>
+                            <td class="py-3 px-3 text-right"><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex" onclick="startEditApp('${app.id}')"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td>
+                        </tr>`;
+                    }
+                }).join('');
+            };
+            
+            const trsApps = generateAppRows(filteredApps.filter(a => a.section === 'apps'), 'app');
+            const trsEdukasi = generateAppRows(filteredApps.filter(a => a.section === 'edukasi'), 'edukasi');
+
+            const theadTemplate = `
+                <thead class="bg-white/40 border-b border-white/50">
+                    <tr>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Ikon</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Aplikasi</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Warna</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Umum</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Pegawai</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Warid</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[70px]">Status</th>
+                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th>
+                    </tr>
+                </thead>
+            `;
+            
+            return `
+            <div class="p-4 md:p-6 w-full h-full flex flex-col overflow-y-auto slider-scroll box-border">
+                <div class="glass-panel p-4 rounded-[20px] flex flex-col lg:flex-row lg:items-center justify-between mb-5 gap-3 shrink-0">
+                    <div>
+                        <h1 class="text-[18px] font-extrabold text-brand-navy">Menu & Aplikasi</h1>
+                        <p class="text-[11px] text-brand-muted mt-0.5">Kelola menu portal dan aplikasi. Tahan dan seret ikon 3 garis untuk mengubah urutan.</p>
+                    </div>
+                    <button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-5 py-2.5 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
+                </div>
+                
+                <div class="mb-6 shrink-0">
+                    <h2 class="text-[14px] font-extrabold text-brand-navy mb-2 ml-2 flex items-center gap-2"><i data-lucide="menu" class="w-4 h-4 text-brand-blue"></i> Tabel Menu Utama Portal</h2>
+                    <div class="glass-panel rounded-[20px] overflow-hidden w-full">
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead class="bg-white/40 border-b border-white/50">
+                                    <tr>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Urutan</th>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Nama Menu</th>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Ikon</th>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Tampil</th>
+                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsMenu}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 mx-2 gap-3 shrink-0 mt-2">
+                    <h2 class="text-[14px] font-extrabold text-brand-navy flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand-blue"></i> Tabel Daftar Aplikasi Utama</h2>
+                    <div class="flex items-center gap-3">
+                        <div class="relative w-full md:w-[200px]">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i>
+                            <input type="text" oninput="triggerAppSearch(this.value)" placeholder="Cari aplikasi..." value="${window.state.searchQueryApp}" class="input-glass pl-8 py-1.5">
+                        </div>
+                        <button onclick="showToast('Fitur Tambah segera hadir')" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button>
+                    </div>
+                </div>
+                
+                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-6 w-full">
+                    <div class="overflow-x-auto slider-scroll w-full">
+                        <table class="w-full text-left border-collapse min-w-[1050px]">
+                            ${theadTemplate}
+                            <tbody>${trsApps}</tbody>
+                        </table>
+                        ${filteredApps.filter(a => a.section === 'apps').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada aplikasi utama ditemukan.</div>' : ''}
+                    </div>
+                </div>
+                
+                <h2 class="text-[14px] font-extrabold text-brand-navy mb-2 mx-2 flex items-center gap-2 shrink-0 mt-2"><i data-lucide="lightbulb" class="w-4 h-4 text-orange-500"></i> Tabel Daftar Karya & Edukasi</h2>
+                
+                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-8 w-full">
+                    <div class="overflow-x-auto slider-scroll w-full">
+                        <table class="w-full text-left border-collapse min-w-[1050px]">
+                            ${theadTemplate}
+                            <tbody>${trsEdukasi}</tbody>
+                        </table>
+                        ${filteredApps.filter(a => a.section === 'edukasi').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada karya/edukasi ditemukan.</div>' : ''}
+                    </div>
+                </div>
+                
+            </div>`;
+        }
+
+        window.triggerUserSearch = function(val) { window.state.searchQueryUser = val.toLowerCase(); window.render(); }
+        
+        window.renderAdminUsers = function() {
+            const filteredUsers = window.DB.users.filter(u => u.name.toLowerCase().includes(window.state.searchQueryUser) || u.role.toLowerCase().includes(window.state.searchQueryUser));
+            const trs = filteredUsers.map(u => `<tr class="border-b border-white/30 hover:bg-white/30 transition-colors"><td class="py-3 px-4"><div class="flex items-center gap-3"><img src="https://i.pravatar.cc/150?u=${u.id}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm"><div><div class="font-bold text-[13px] text-brand-navy">${u.name}</div><div class="text-[10px] text-brand-muted">${u.email}</div></div></div></td><td class="py-3 px-4 hidden md:table-cell"><span class="text-[11px] font-bold px-2.5 py-1 ${u.role === 'Super Admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600'} rounded-md border border-white/50">${u.role}</span></td><td class="py-3 px-4 hidden lg:table-cell"><div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full ${u.status ? 'bg-green-500' : 'bg-red-500'}"></div><span class="text-[12px] font-bold text-brand-navy">${u.status ? 'Aktif' : 'Nonaktif'}</span></div></td><td class="py-3 px-4 text-right"><div class="flex items-center justify-end gap-2"><button onclick="toggleUserStatus(${u.id})" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-muted border border-white shadow-sm" title="${u.status ? 'Nonaktifkan' : 'Aktifkan'}"><i data-lucide="${u.status ? 'ban' : 'check-circle'}" class="w-3.5 h-3.5 ${u.status ? 'text-red-500' : 'text-green-500'}"></i></button><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm" onclick="showEditUserModal(${u.id})"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></div></td></tr>`).join('');
+            return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border"><div class="glass-panel p-4 rounded-[20px] flex flex-col md:flex-row md:items-center justify-between mb-5 gap-3"><div><h1 class="text-[18px] font-extrabold text-brand-navy">Data Pengguna</h1><p class="text-[11px] text-brand-muted mt-0.5">Kelola akun dan role.</p></div><div class="flex items-center gap-3"><div class="relative w-full max-w-[200px]"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerUserSearch(this.value)" placeholder="Cari pengguna..." value="${window.state.searchQueryUser}" class="input-glass pl-8 py-1.5"></div><button onclick="showAddUserModal()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah</button></div></div><div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full"><div class="overflow-y-auto slider-scroll flex-1 w-full"><table class="w-full text-left border-collapse min-w-[500px]"><thead class="bg-white/40 sticky top-0 backdrop-blur-md z-10"><tr><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase">Pengguna</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden md:table-cell">Role</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden lg:table-cell">Status</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase text-right">Aksi</th></tr></thead><tbody>${trs}</tbody></table>${filteredUsers.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada pengguna ditemukan.</div>' : ''}</div></div></div>`;
+        }
+
+        window.renderAdminLogs = function() {
+            const rows = window.DB.logs.map(l => `<div class="flex items-start gap-3.5 p-3.5 border-b border-white/30 hover:bg-white/30 transition-colors"><div class="w-9 h-9 rounded-full bg-${l.color}-100 flex items-center justify-center border border-white shrink-0"><i data-lucide="activity" class="w-4 h-4 text-${l.color}-500"></i></div><div class="flex-1 min-w-0"><h4 class="text-[12px] font-bold text-brand-navy leading-tight">${l.action} <span class="text-brand-blue">${l.target}</span></h4><div class="flex items-center gap-2.5 mt-1"><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${l.user}</span><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${l.time}</span><span class="text-[9px] font-bold px-1.5 py-0.5 bg-white/60 border border-white rounded text-brand-muted ml-auto">${l.type}</span></div></div></div>`).join('');
+            return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border"><div class="glass-panel p-4 rounded-[20px] mb-5 shrink-0"><h1 class="text-[18px] font-extrabold text-brand-navy">Log Aktivitas</h1><p class="text-[11px] text-brand-muted mt-0.5">Riwayat tindakan penting di sistem.</p></div><div class="glass-panel rounded-[20px] flex-1 overflow-y-auto slider-scroll p-1 w-full">${rows}</div></div>`;
+        }
+
+        // ==========================================
+        // SMART RENDER ENGINE (Anti-Flicker Isolated)
+        // ==========================================
+        window.render = function() {
+            const root = document.getElementById('app-root');
+            const isMobile = window.innerWidth < 768;
+            const isAdminView = window.state.path.startsWith('#admin');
+
+            if (isAdminView && !['Super Admin', 'Admin'].includes(window.state.user.role)) { 
+                window.navigate('#home'); 
+                return; 
+            }
+
+            if (isAdminView) {
+                let adminContent = '';
+                switch(window.state.path) {
+                    case '#admin-dashboard': adminContent = window.renderAdminDashboard(); break;
+                    case '#admin-menu-apps': adminContent = window.renderAdminMenuApps(); break;
+                    case '#admin-users': adminContent = window.renderAdminUsers(); break;
+                    case '#admin-logs': adminContent = window.renderAdminLogs(); break;
+                    default: adminContent = window.renderAdminDashboard();
+                }
+
+                const existingShell = document.getElementById('admin-shell-layout');
+                if (existingShell && existingShell.dataset.mobile === String(isMobile)) {
+                    // Inject only inner content to prevent flickering background!
+                    document.getElementById('admin-main-content').innerHTML = adminContent;
+                    if (!isMobile) {
+                        const sidebarLinks = document.getElementById('admin-sidebar-links');
+                        if (sidebarLinks) sidebarLinks.innerHTML = window.getAdminSidebarLinks();
+                    } else {
+                        const mobileLinks = document.getElementById('admin-mobile-links');
+                        if (mobileLinks) mobileLinks.innerHTML = window.getAdminMobileNavLinks();
+                    }
+                } else {
+                    // Build shell on first load
+                    root.innerHTML = `
+                    <div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">
+                        ${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-[10px] flex items-center justify-center text-white shadow-sm"><i data-lucide="layout-dashboard" class="w-4 h-4"></i></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}
+                        <div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}">
+                            <header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full">
+                                <div class="font-bold text-brand-navy text-[14px] md:hidden">Admin Panel</div>
+                                <div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div>
+                            </header>
+                            <main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main>
+                        </div>
+                        ${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}
+                    </div>`;
+                }
+            } else {
+                root.innerHTML = window.renderPortalLayout(isMobile);
+            }
+            
+            setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
+            window.renderNotifItems();
+        }
+        
+        window.addEventListener('resize', () => {
+            const isMobile = window.innerWidth < 768;
+            const existingShell = document.getElementById('admin-shell-layout');
+            if (existingShell && existingShell.dataset.mobile !== String(isMobile)) {
+                window.render();
+            }
+        });
+
+        // Start App and Auth
+        initCloud();
+    </script>
+</body>
+</html>
