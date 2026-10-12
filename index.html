@@ -11,6 +11,8 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- LIBRARY SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -101,13 +103,23 @@
     <div id="toast-container"></div>
     <div id="modal-overlay" onclick="closeModal(event)"><div class="modal-content glass-panel rounded-[24px] p-6 flex flex-col" onclick="event.stopPropagation()" id="modal-body"></div></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // ==========================================
+        // 1. KONEKSI SUPABASE
+        // ==========================================
+        // PASTE URL DAN KEY ANDA DI BAWAH INI:
+        const SUPABASE_URL = 'https://vjgydzodhejzwlvwxbmu.supabase.co/rest/v1/';
+        const SUPABASE_KEY = 'sb_publishable_m_i6gSzO4cdebG975Vqthw_Gn-iT2Uv';
+        
+        let supabaseClient = null;
+        if (SUPABASE_URL.startsWith('http')) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            console.warn("URL Supabase belum diisi. Aplikasi berjalan di mode Pratinjau Lokal.");
+        }
 
         // ==========================================
-        // 1. CENTRAL DATABASE (STATE MANAGEMENT)
+        // 2. CENTRAL DATABASE (STATE MANAGEMENT)
         // ==========================================
         window.DB = {
             menus: [
@@ -163,61 +175,87 @@
         ];
 
         // ==========================================
-        // CLOUD DATABASE INTEGRATION (REALTIME)
+        // 3. INISIALISASI & SINKRONISASI SUPABASE
         // ==========================================
-        let cloudDocRef = null;
-        let setDocFn = setDoc; // Store reference to module function
-
         async function initCloud() {
+            if (!supabaseClient) {
+                window.render();
+                return;
+            }
             try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'alka-portal-v3';
-                const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-                const firebaseConfig = JSON.parse(configStr);
-                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-                if (!firebaseConfig || !firebaseConfig.projectId) {
-                    console.log("No Cloud Environment: Running Local Mode");
-                    window.render();
-                    return;
+                // Tarik data awal dari Supabase
+                const { data, error } = await supabaseClient
+                    .from('portal_state')
+                    .select('data')
+                    .eq('id', 1)
+                    .single();
+                
+                if (error) {
+                    console.log("Supabase error (mungkin belum disetup), pakai data default lokal.");
+                } else if (data && data.data && Object.keys(data.data).length > 0) {
+                    // Terapkan data dari cloud ke memori
+                    const cloudDB = data.data;
+                    if (cloudDB.menus) window.DB.menus = cloudDB.menus;
+                    if (cloudDB.apps) window.DB.apps = cloudDB.apps;
+                    if (cloudDB.users) window.DB.users = cloudDB.users;
+                    if (cloudDB.logs) window.DB.logs = cloudDB.logs;
                 }
+                
+                window.render();
 
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const cloudDB = getFirestore(app);
+                // Setup Realtime Listener - Jika ada perubahan dari perangkat lain, otomatis update!
+                supabaseClient.channel('custom-all-channel')
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'portal_state' },
+                        (payload) => {
+                            const newData = payload.new.data;
+                            if (newData) {
+                                if (newData.menus) window.DB.menus = newData.menus;
+                                if (newData.apps) window.DB.apps = newData.apps;
+                                if (newData.users) window.DB.users = newData.users;
+                                if (newData.logs) window.DB.logs = newData.logs;
+                                window.render(); // Render ulang dengan halus tanpa kedip
+                            }
+                        }
+                    )
+                    .subscribe();
 
-                if (initialToken) {
-                    await signInWithCustomToken(auth, initialToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                if (!auth.currentUser) return;
-
-                // STRICT PATH RULE COMPLIANCE: /artifacts/{appId}/public/data/{collectionName}
-                cloudDocRef = doc(cloudDB, 'artifacts', appId, 'public', 'data', 'portal_state', 'master_db');
-
-                // Real-time listener
-                onSnapshot(cloudDocRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        const data = snapshot.data();
-                        if (data.menus) window.DB.menus = data.menus;
-                        if (data.apps) window.DB.apps = data.apps;
-                        if (data.users) window.DB.users = data.users;
-                        // For logs, we merge locally to prevent losing fast sequences
-                        
-                        window.render(); // Update UI smoothly when cloud changes
-                    } else {
-                        // First run, seed the database
-                        window.globalSave();
-                    }
-                }, (err) => {
-                    console.error("Cloud Error:", err);
-                });
-
-            } catch (e) {
-                console.error("Gagal inisialisasi cloud, beralih ke lokal:", e);
+            } catch (err) {
+                console.error("Gagal terhubung ke Cloud, berjalan di mode lokal:", err);
                 window.render();
             }
+        }
+
+        window.globalSave = async function() {
+            if (!supabaseClient) {
+                window.showToast('Data disimpan sementara (Masukkan URL Supabase agar permanen)', 'info', 'text-orange-500');
+                window.render();
+                return;
+            }
+            window.showToast('Menyimpan perubahan ke Supabase...', 'cloud-upload', 'text-blue-500');
+            try {
+                // Bungkus semua pengaturan yang mau disimpan
+                const dataToSave = {
+                    menus: window.DB.menus,
+                    apps: window.DB.apps,
+                    users: window.DB.users,
+                    logs: window.DB.logs
+                };
+
+                // Lempar ke Supabase
+                const { error } = await supabaseClient
+                    .from('portal_state')
+                    .update({ data: dataToSave })
+                    .eq('id', 1);
+
+                if (error) throw error;
+                window.showToast('Semua pengaturan berhasil tersimpan permanen!', 'cloud-check', 'text-green-500');
+            } catch(e) {
+                console.error("Gagal simpan ke Supabase:", e);
+                window.showToast('Gagal terhubung ke Cloud!', 'x-circle', 'text-red-500');
+            }
+            window.render();
         }
 
         window.showToast = function(msg, icon = 'check-circle', color = 'text-green-500') {
@@ -234,7 +272,9 @@
             const now = new Date();
             const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             window.DB.logs.unshift({ time: timeStr, user: window.state.user.name, action, target, type, color });
-            if(window.DB.logs.length > 50) window.DB.logs.pop(); // Keep log size manageable
+            if(window.DB.logs.length > 50) window.DB.logs.pop(); 
+            // Auto save log ke cloud
+            window.globalSave();
         }
 
         window.openModal = function(htmlContent) {
@@ -250,24 +290,9 @@
             document.getElementById('modal-overlay').classList.remove('show');
         }
 
-        window.globalSave = async function() {
-            window.showToast('Menyimpan perubahan...', 'cloud-upload', 'text-blue-500');
-            if(cloudDocRef) {
-                try {
-                    await setDocFn(cloudDocRef, {
-                        menus: window.DB.menus,
-                        apps: window.DB.apps,
-                        users: window.DB.users
-                    });
-                    window.showToast('Semua pengaturan berhasil disimpan ke Cloud!', 'cloud-check', 'text-green-500');
-                } catch(e) {
-                    console.error("Gagal simpan:", e);
-                    window.showToast('Gagal terhubung ke Cloud!', 'x-circle', 'text-red-500');
-                }
-            }
-            window.render();
-        }
-
+        // ==========================================
+        // DRAG & DROP HANDLERS (NATIVE HTML5)
+        // ==========================================
         let dragSrcEl = null;
         let dragType = null;
         let dragId = null;
@@ -316,8 +341,7 @@
 
                     window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue');
                     window.render();
-                    // Auto-save to cloud on structural changes
-                    if(cloudDocRef) window.globalSave();
+                    window.globalSave(); // Auto save struktur ke Cloud
                 }
             }
             return false;
@@ -332,6 +356,9 @@
         window.disableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'false'); }
 
 
+        // ==========================================
+        // INLINE EDITING LOGIC
+        // ==========================================
         window.startEditMenu = function(id) { window.state.editingMenuId = id; window.render(); }
         window.cancelEditMenu = function() { window.state.editingMenuId = null; window.render(); }
         
@@ -348,6 +375,7 @@
             }
             window.state.editingMenuId = null;
             window.render();
+            window.globalSave();
         }
 
         window.toggleMenuVisibility = function(id) {
@@ -357,6 +385,7 @@
                 window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange');
                 window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`);
                 window.render();
+                window.globalSave();
             }
         }
 
@@ -401,6 +430,7 @@
             }
             window.state.editingAppId = null;
             window.render();
+            window.globalSave();
         }
 
         window.toggleAppStatus = function(id) {
@@ -410,6 +440,7 @@
                 window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
                 window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
                 window.render();
+                window.globalSave();
             }
         }
 
@@ -420,6 +451,7 @@
                 window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red');
                 window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
                 window.render();
+                window.globalSave();
             }
         }
 
@@ -451,6 +483,7 @@
             window.showToast('Pengguna berhasil ditambahkan!');
             window.closeModal();
             window.render();
+            window.globalSave();
         }
 
         window.showEditUserModal = function(id) {
@@ -483,6 +516,7 @@
                 window.showToast('Data berhasil diperbarui!');
                 window.closeModal();
                 window.render();
+                window.globalSave();
             }
         }
 
@@ -590,13 +624,13 @@
         }
 
         // ==========================================
-        // RENDER VIEWS (PORTAL)
+        // RENDER VIEWS (PORTAL UTAMA)
         // ==========================================
         window.renderNativeViews = function(path) {
             if (path === '#login') {
-                return `<div class="w-full h-full flex items-center justify-center p-5 relative"><div class="glass-panel w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10"><div class="mb-6 scale-110">${logoLargeSvg}</div><h2 class="text-[22px] font-extrabold text-brand-navy mb-2 tracking-tight">Selamat Datang</h2><p class="text-[13px] text-brand-muted mb-8 font-medium">Silakan masuk menggunakan akun My Alka Anda.</p><div class="w-full flex flex-col gap-3 mb-6"><input type="text" placeholder="NIS / NIK / Email" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"><input type="password" placeholder="Kata Sandi" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"></div><button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] py-3.5 rounded-2xl shadow-lg transition-all">Masuk Sekarang</button></div></div>`;
+                return `<div class="w-full h-full flex items-center justify-center p-5 relative animate-fade"><div class="glass-panel w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10"><div class="mb-6 scale-110">${logoLargeSvg}</div><h2 class="text-[22px] font-extrabold text-brand-navy mb-2 tracking-tight">Selamat Datang</h2><p class="text-[13px] text-brand-muted mb-8 font-medium">Silakan masuk menggunakan akun My Alka Anda.</p><div class="w-full flex flex-col gap-3 mb-6"><input type="text" placeholder="NIS / NIK / Email" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"><input type="password" placeholder="Kata Sandi" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"></div><button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] py-3.5 rounded-2xl shadow-lg transition-all">Masuk Sekarang</button></div></div>`;
             }
-            if (path === '#profil') { return `<div class="w-full h-full flex items-center justify-center p-5"><div class="glass-panel p-8 rounded-[32px] text-center"><i data-lucide="wrench" class="w-12 h-12 text-brand-muted mx-auto mb-4"></i><h2 class="text-xl font-bold text-brand-navy">Sedang Dibangun</h2><button onclick="navigate('#apps')" class="mt-4 px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-sm">Kembali</button></div></div>`; }
+            if (path === '#profil') { return `<div class="w-full h-full flex items-center justify-center p-5 animate-fade"><div class="glass-panel p-8 rounded-[32px] text-center"><i data-lucide="wrench" class="w-12 h-12 text-brand-muted mx-auto mb-4"></i><h2 class="text-xl font-bold text-brand-navy">Sedang Dibangun</h2><button onclick="navigate('#apps')" class="mt-4 px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-sm">Kembali</button></div></div>`; }
 
             let currentFilter = 'apps';
             if(path === '#edukasi') currentFilter = 'edukasi';
@@ -604,7 +638,7 @@
             const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn || a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && a.section === currentFilter);
             let appGridHTML = visibleApps.map(app => `<div onclick="navigate('#app-${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none mb-1 truncate">${app.name}</h4><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`).join('');
 
-            return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
+            return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
         }
 
         window.renderPortalLayout = function(isMobile) {
@@ -686,7 +720,7 @@
                         ${!isMobile && isAppView ? `<aside class="w-[190px] shrink-0 bg-white/30 backdrop-blur-xl z-30 border-r border-white/40 flex flex-col"><div class="px-3 py-3 border-b border-white/30 mt-1"><h2 class="text-[13px] font-extrabold text-brand-navy ml-1">${currentSection === 'edukasi' ? 'Karya & Edukasi' : 'Daftar Aplikasi'}</h2></div><div class="flex-1 overflow-y-auto slider-scroll p-2">${appListHTML}</div></aside>` : ''}
                         <main class="flex-1 w-full relative h-full overflow-hidden flex flex-col">
                             <div id="content-zoom-wrapper" class="w-full h-full flex flex-col bg-white/10" style="transform: scale(${window.state.zoom}); width: ${100 / window.state.zoom}%; height: ${100 / window.state.zoom}%;">
-                                ${isIframe && iframeUrl ? `<div class="w-full h-full flex-1 bg-white"><iframe src="${iframeUrl}" class="w-full h-full border-0 block" allowfullscreen></iframe></div>` : window.renderNativeViews(window.state.path)}
+                                ${isIframe && iframeUrl ? `<div class="w-full h-full flex-1 bg-white animate-fade"><iframe src="${iframeUrl}" class="w-full h-full border-0 block" allowfullscreen></iframe></div>` : window.renderNativeViews(window.state.path)}
                             </div>
                         </main>
                     </div>
@@ -879,7 +913,7 @@
         }
 
         // ==========================================
-        // SMART RENDER ENGINE (Anti-Flicker Isolated)
+        // SMART RENDER ENGINE (Anti-Flicker)
         // ==========================================
         window.render = function() {
             const root = document.getElementById('app-root');
@@ -903,7 +937,7 @@
 
                 const existingShell = document.getElementById('admin-shell-layout');
                 if (existingShell && existingShell.dataset.mobile === String(isMobile)) {
-                    // Inject only inner content to prevent flickering background!
+                    // Update inner content tanpa me-render ulang seluruh halaman (bebas kedip)
                     document.getElementById('admin-main-content').innerHTML = adminContent;
                     if (!isMobile) {
                         const sidebarLinks = document.getElementById('admin-sidebar-links');
@@ -913,7 +947,7 @@
                         if (mobileLinks) mobileLinks.innerHTML = window.getAdminMobileNavLinks();
                     }
                 } else {
-                    // Build shell on first load
+                    // Buat shell dasar pertama kali (TANPA animasi fade yang bikin layar kedip putih)
                     root.innerHTML = `
                     <div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">
                         ${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-[10px] flex items-center justify-center text-white shadow-sm"><i data-lucide="layout-dashboard" class="w-4 h-4"></i></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}
@@ -942,8 +976,8 @@
                 window.render();
             }
         });
-
-        // Start App and Auth
+        
+        // Memulai aplikasi dengan mengambil data dari Supabase
         initCloud();
     </script>
 </body>
