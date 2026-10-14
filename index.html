@@ -11,7 +11,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- LIBRARY SUPABASE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -39,7 +39,6 @@
             overflow: hidden; -webkit-tap-highlight-color: transparent;
         }
 
-        /* WATER GLASS EFFECT */
         .glass-panel {
             background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px) saturate(150%);
             border-top: 1.5px solid rgba(255, 255, 255, 0.9); border-left: 1.5px solid rgba(255, 255, 255, 0.7);
@@ -54,10 +53,10 @@
         .glass-popup { opacity: 0; transform: scale(0.95); pointer-events: none; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
         .glass-popup.show { opacity: 1; transform: scale(1); pointer-events: auto; }
 
-        .slider-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .slider-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .slider-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+        .slider-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.3); border-radius: 10px; margin: 4px; }
 
-        /* Full Width Bottom Nav */
         .bottom-nav {
             position: absolute; bottom: 0; left: 0; right: 0; height: 70px;
             display: flex; justify-content: space-around; align-items: center; z-index: 50; padding-bottom: env(safe-area-inset-bottom);
@@ -74,27 +73,34 @@
         .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Form Controls */
-        .input-glass { background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.8); border-radius: 8px; padding: 6px 10px; width: 100%; outline: none; transition: all 0.2s; font-size: 12px; color: #0f172a; }
-        .input-glass:focus { border-color: #3b82f6; background: rgba(255,255,255,0.8); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .input-glass { background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.9); border-radius: 8px; padding: 6px 10px; width: 100%; outline: none; transition: all 0.2s; font-size: 12px; color: #0f172a; }
+        .input-glass:focus { border-color: #3b82f6; background: rgba(255,255,255,0.95); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
         
-        /* Modal Overlay */
-        #modal-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.2); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; padding: 20px; }
+        #modal-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.25); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; padding: 20px; }
         #modal-overlay.show { display: flex; opacity: 1; }
-        .modal-content { animation: modalZoom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { animation: modalZoom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 720px; width: 100%; max-height: 90vh; overflow-y: auto; background: rgba(255, 255, 255, 0.88); }
         @keyframes modalZoom { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        /* Toast */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); font-size: 13px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        /* Drag & Drop Styles */
         .draggable-row { transition: background-color 0.2s; }
         .draggable-row.dragging { opacity: 0.4; background: rgba(59, 130, 246, 0.1); }
         .draggable-row.drag-over { border-top: 2px solid #3b82f6; }
         .grip-handle { cursor: grab; user-select: none; }
         .grip-handle:active { cursor: grabbing; }
+
+        /* SOLID OPAQUE STICKY COLUMNS TO PREVENT BLEEDING & OVERLAPS */
+        .sticky-col-1 { position: sticky; left: 0; z-index: 25; background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
+        .sticky-col-2 { position: sticky; left: 70px; z-index: 25; background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
+        .sticky-col-3 { position: sticky; left: 140px; z-index: 25; background-color: #ffffff !important; border-right: 1px solid #e2e8f0; box-shadow: 4px 0 8px -2px rgba(0,0,0,0.06); }
+        .sticky-col-right { position: sticky; right: 0; z-index: 25; background-color: #ffffff !important; border-left: 1px solid #e2e8f0; box-shadow: -4px 0 8px -2px rgba(0,0,0,0.06); }
+
+        .sticky-col-1-header { position: sticky; left: 0; z-index: 35; background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
+        .sticky-col-2-header { position: sticky; left: 70px; z-index: 35; background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; }
+        .sticky-col-3-header { position: sticky; left: 140px; z-index: 35; background-color: #f1f5f9 !important; border-right: 1px solid #e2e8f0; box-shadow: 4px 0 8px -2px rgba(0,0,0,0.06); }
+        .sticky-col-right-header { position: sticky; right: 0; z-index: 35; background-color: #f1f5f9 !important; border-left: 1px solid #e2e8f0; box-shadow: -4px 0 8px -2px rgba(0,0,0,0.06); }
     </style>
 </head>
 <body class="antialiased selection:bg-brand-blue selection:text-white">
@@ -103,24 +109,23 @@
     <div id="toast-container"></div>
     <div id="modal-overlay" onclick="closeModal(event)"><div class="modal-content glass-panel rounded-[24px] p-6 flex flex-col" onclick="event.stopPropagation()" id="modal-body"></div></div>
 
+    <input type="file" id="fileGuru" class="hidden" accept=".xlsx, .xls" onchange="handleUploadGuru(event)">
+    <input type="file" id="fileTugas" class="hidden" accept=".xlsx, .xls" onchange="handleUploadTugas(event)">
+    <input type="file" id="fileSiswa" class="hidden" accept=".xlsx, .xls" onchange="handleUploadSiswa(event)">
+
     <script>
-        // ==========================================
-        // 1. KONEKSI SUPABASE
-        // ==========================================
-        // PASTE URL DAN KEY ANDA DI BAWAH INI:
         const SUPABASE_URL = 'https://vjgydzodhejzwlvwxbmu.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_m_i6gSzO4cdebG975Vqthw_Gn-iT2Uv';
         
         let supabaseClient = null;
         if (SUPABASE_URL.startsWith('http')) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } else {
-            console.warn("URL Supabase belum diisi. Aplikasi berjalan di mode Pratinjau Lokal.");
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    realtime: false // Disable websocket in canvas environment to prevent errors
+                });
+            } catch(e) { console.warn("Supabase init warning:", e); }
         }
 
-        // ==========================================
-        // 2. CENTRAL DATABASE (STATE MANAGEMENT)
-        // ==========================================
         window.DB = {
             menus: [
                 { id: 'home', name: 'Beranda', icon: 'home', hash: '#home', visible: true, order: 1, type: 'iframe', url: 'https://digitech-labs.github.io/ALKAUTSAR-ISLAMIC/' },
@@ -140,501 +145,527 @@
             users: [
                 { id: 1, name: 'Salsabila', email: 'salsabila@alka.co.id', role: 'Super Admin', status: true, lastLogin: '10 menit lalu' },
                 { id: 2, name: 'Pegawai A', email: 'pegawai.a@alka.co.id', role: 'Pegawai', status: true, lastLogin: '1 jam lalu' },
-                { id: 3, name: 'Admin B', email: 'admin.b@alka.co.id', role: 'Admin', status: true, lastLogin: '2 jam lalu' },
-                { id: 4, name: 'Rizky Pratama', email: 'rizky@alka.co.id', role: 'Warid', status: false, lastLogin: '7 hari lalu' }
+                { id: 3, name: 'Admin B', email: 'admin.b@alka.co.id', role: 'Admin', status: true, lastLogin: '2 jam lalu' }
             ],
-            logs: [
-                { time: '12:00', user: 'Sistem', action: 'Sistem dimulai', target: 'Core', type: 'System', color: 'blue' }
-            ]
-        };
-
-        const NOTIFICATIONS = [
-            { id: 1, title: 'Selamat Datang!', desc: 'My Alka v2.0 terintegrasi.', icon: 'info', color: 'text-blue-500', bg: 'bg-blue-100', target: '#home', read: true }
-        ];
-
-        window.state = {
-            path: window.location.hash || '#home',
-            zoom: 1.0,
-            notifTab: 'semua',
-            isLoggedIn: true,
-            user: window.DB.users[0],
-            searchQueryApp: '',
-            searchQueryUser: '',
-            editingMenuId: null,
-            editingAppId: null
-        };
-
-        const AVAILABLE_COLORS = [
-            { id: 'blue', text: 'text-blue-500', bg: 'bg-blue-100' },
-            { id: 'purple', text: 'text-purple-500', bg: 'bg-purple-100' },
-            { id: 'green', text: 'text-green-500', bg: 'bg-green-100' },
-            { id: 'teal', text: 'text-teal-500', bg: 'bg-teal-100' },
-            { id: 'yellow', text: 'text-yellow-500', bg: 'bg-yellow-100' },
-            { id: 'orange', text: 'text-orange-500', bg: 'bg-orange-100' },
-            { id: 'pink', text: 'text-pink-500', bg: 'bg-pink-100' }
-        ];
-
-        // ==========================================
-        // 3. INISIALISASI & SINKRONISASI SUPABASE
-        // ==========================================
-        async function initCloud() {
-            if (!supabaseClient) {
-                window.render();
-                return;
-            }
-            try {
-                // Tarik data awal dari Supabase
-                const { data, error } = await supabaseClient
-                    .from('portal_state')
-                    .select('data')
-                    .eq('id', 1)
-                    .single();
-                
-                if (error) {
-                    console.log("Supabase error (mungkin belum disetup), pakai data default lokal.");
-                } else if (data && data.data && Object.keys(data.data).length > 0) {
-                    // Terapkan data dari cloud ke memori
-                    const cloudDB = data.data;
-                    if (cloudDB.menus) window.DB.menus = cloudDB.menus;
-                    if (cloudDB.apps) window.DB.apps = cloudDB.apps;
-                    if (cloudDB.users) window.DB.users = cloudDB.users;
-                    if (cloudDB.logs) window.DB.logs = cloudDB.logs;
+            guru: [
+                {
+                    id: 1, nama: 'Ahmad Dahlan', namaGelar: 'S.Pd., M.Pd.', nik: '3201011205800001', nbm: '1098765', waliKelas: '6A', tugasTambahan: 'Wakasek Kurikulum', pelatihEkstra: 'Pramuka',
+                    mapel1: 'Pend. Agama Islam', kelasMapel1: '1A, 1B, 2A, 2B, 3A, 3B', mapel2: 'Bahasa Arab', kelasMapel2: '4A, 4B, 5A', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '',
+                    jk: 'L', tempatLahir: 'Bandung', tanggalLahir: '12-05-1980', provinsi: 'Jawa Barat', kabupaten: 'Kota Bandung', kecamatan: 'Sumur Bandung', desa: 'Babakan Ciamis', alamatDetail: 'Jl. Merdeka No. 45, RT 02/05', noWa: '081234567890',
+                    jenisKepegawaian: 'GTY', statusKepegawaian: 'Aktif', pendidikanTerakhir: 'S2', ptTerakhir: 'Universitas Pendidikan Indonesia', ptProvinsi: 'Jawa Barat', ptKabupaten: 'Kota Bandung', ptKecamatan: 'Sukasari', ptDesa: 'Isola', ptAlamatDetail: 'Jl. Dr. Setiabudi No.229', prodi: 'Pend. Matematika', tahunMasuk: '1998', tahunLulus: '2004',
+                    ayahNama: 'Hasanudin', ayahTahun: '1955', ayahNik: '3201010101550001', ayahPendidikan: 'SMA', ibuNama: 'Siti Hajar', ibuTahun: '1958', ibuNik: '3201010101580002', ibuPendidikan: 'SMP', linkKk: '#', linkIjazah: '#', status: true
                 }
-                
+            ],
+            siswa: [
+                {
+                    id: 1, no: '1', no_presensi: '01', kelas: '6A', ekstrakurikuler: 'Pramuka, Futsal', nis: '10101', nama_siswa: 'Budi Santoso', nisn: '0012345678', nik_anak: '3201011010100001', l_p: 'L', agama: 'Islam', anak_ke: '1', tempat_lahir: 'Jakarta', tgl_lahir: '10-10-2010', no_kk: '3201010000000001', tgl_kk: '01-01-2015',
+                    alamat_provinsi: 'DKI Jakarta', alamat_kabupaten: 'Jakarta Selatan', alamat_kecamatan: 'Kebayoran Baru', alamat_desa: 'Senayan', alamat_jalan: 'Jl. Sudirman No. 10 Komplek Permata Hijau Blok B', alamat_rt: '01', alamat_rw: '02',
+                    sekolah_nama: 'SDIT Al-Falah', sekolah_npsn: '20212345', sekolah_provinsi: 'DKI Jakarta', sekolah_kabupaten: 'Jakarta Selatan', sekolah_kecamatan: 'Kebayoran Baru',
+                    nama_ayah: 'Joko Santoso', ayah_nik: '3201010101800001', ayah_tahun_lahir: '1980', ayah_pendidikan: 'S1', ayah_pekerjaan: 'Wiraswasta / Pengusaha', ayah_penghasilan: '5.000.000 - 10.000.000',
+                    nama_ibu: 'Siti Maimunah', ibu_nik: '3201010101820002', ibu_tahun_lahir: '1982', ibu_pendidikan: 'SMA', ibu_pekerjaan: 'Ibu Rumah Tangga', ibu_penghasilan: 'Tidak Berpenghasilan',
+                    alamat_ortu: 'Sesuai dengan alamat siswa', nama_wali: '-', kerja_wali: '-', alamat_wali: '-', no_wa: '081299998888', link_kk: '#', link_ijazah: '#', status: true
+                }
+            ],
+            logs: [{ time: '12:00', user: 'Sistem', action: 'Sistem dimulai', target: 'Core', type: 'System', color: 'blue' }]
+        };
+
+        const NOTIFICATIONS = [{ id: 1, title: 'Selamat Datang!', desc: 'My Alka v2.0 terintegrasi ke Supabase.', icon: 'info', color: 'text-blue-500', bg: 'bg-blue-100', target: '#home', read: true }];
+
+        window.state = { path: window.location.hash || '#home', zoom: 1.0, notifTab: 'semua', isLoggedIn: true, user: window.DB.users[0], searchQueryApp: '', searchQueryUser: '', searchQueryGuru: '', searchQuerySiswa: '', searchQueryTugas: '', editingMenuId: null, editingAppId: null, editingGuruId: null, editingSiswaId: null, editingTugasId: null };
+
+        const AVAILABLE_COLORS = [ { id: 'blue', text: 'text-blue-500', bg: 'bg-blue-100' }, { id: 'purple', text: 'text-purple-500', bg: 'bg-purple-100' }, { id: 'green', text: 'text-green-500', bg: 'bg-green-100' }, { id: 'teal', text: 'text-teal-500', bg: 'bg-teal-100' }, { id: 'yellow', text: 'text-yellow-500', bg: 'bg-yellow-100' }, { id: 'orange', text: 'text-orange-500', bg: 'bg-orange-100' }, { id: 'pink', text: 'text-pink-500', bg: 'bg-pink-100' } ];
+
+        window.formatDateId = function(dateStr) {
+            if (!dateStr || dateStr === '-') return '-';
+            let parts = String(dateStr).split('-');
+            if (parts.length !== 3) return dateStr;
+            let day, month, year;
+            if (parts[0].length === 4) { year = parts[0]; month = parts[1]; day = parts[2]; } else { day = parts[0]; month = parts[1]; year = parts[2]; } 
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+            const mIndex = parseInt(month, 10) - 1;
+            if (mIndex >= 0 && mIndex < 12) return `${parseInt(day, 10)} ${months[mIndex]} ${year}`;
+            return dateStr;
+        }
+
+        async function initCloud() {
+            if (!supabaseClient) { window.render(); return; }
+            try {
+                const [resGuru, resSiswa, resState] = await Promise.all([
+                    supabaseClient.from('guru').select('*'),
+                    supabaseClient.from('siswa').select('*'),
+                    supabaseClient.from('portal_state').select('data').eq('id', 1).maybeSingle()
+                ]);
+
+                if (!resGuru.error && resGuru.data && resGuru.data.length > 0) {
+                    window.DB.guru = resGuru.data;
+                }
+                if (!resSiswa.error && resSiswa.data && resSiswa.data.length > 0) {
+                    window.DB.siswa = resSiswa.data;
+                }
+                if (!resState.error && resState.data && resState.data.data) {
+                    const cDB = resState.data.data;
+                    if (cDB.menus) window.DB.menus = cDB.menus;
+                    if (cDB.apps) window.DB.apps = cDB.apps;
+                    if (cDB.users) window.DB.users = cDB.users;
+                    if (cDB.logs) window.DB.logs = cDB.logs;
+                }
                 window.render();
-
-                // Setup Realtime Listener - Jika ada perubahan dari perangkat lain, otomatis update!
-                supabaseClient.channel('custom-all-channel')
-                    .on(
-                        'postgres_changes',
-                        { event: '*', schema: 'public', table: 'portal_state' },
-                        (payload) => {
-                            const newData = payload.new.data;
-                            if (newData) {
-                                if (newData.menus) window.DB.menus = newData.menus;
-                                if (newData.apps) window.DB.apps = newData.apps;
-                                if (newData.users) window.DB.users = newData.users;
-                                if (newData.logs) window.DB.logs = newData.logs;
-                                window.render(); // Render ulang dengan halus tanpa kedip
-                            }
-                        }
-                    )
-                    .subscribe();
-
             } catch (err) {
-                console.error("Gagal terhubung ke Cloud, berjalan di mode lokal:", err);
+                console.warn("Cloud init error:", err);
                 window.render();
             }
         }
 
         window.globalSave = async function() {
-            if (!supabaseClient) {
-                window.showToast('Data disimpan sementara (Masukkan URL Supabase agar permanen)', 'info', 'text-orange-500');
-                window.render();
-                return;
-            }
-            window.showToast('Menyimpan perubahan ke Supabase...', 'cloud-upload', 'text-blue-500');
+            if (!supabaseClient) { window.showToast('Data disimpan lokal.', 'info', 'text-orange-500'); window.render(); return; }
+            window.showToast('Menyimpan ke Supabase...', 'cloud-upload', 'text-blue-500');
             try {
-                // Bungkus semua pengaturan yang mau disimpan
-                const dataToSave = {
-                    menus: window.DB.menus,
-                    apps: window.DB.apps,
-                    users: window.DB.users,
-                    logs: window.DB.logs
-                };
+                await supabaseClient.from('portal_state').upsert({ id: 1, data: { menus: window.DB.menus, apps: window.DB.apps, users: window.DB.users, logs: window.DB.logs } });
 
-                // Lempar ke Supabase
-                const { error } = await supabaseClient
-                    .from('portal_state')
-                    .update({ data: dataToSave })
-                    .eq('id', 1);
+                if (window.DB.guru.length > 0) {
+                    await supabaseClient.from('guru').upsert(window.DB.guru.map(g => ({ ...g, id: Number(g.id) })));
+                }
+                if (window.DB.siswa.length > 0) {
+                    await supabaseClient.from('siswa').upsert(window.DB.siswa.map(s => ({ ...s, id: Number(s.id) })));
+                }
 
-                if (error) throw error;
-                window.showToast('Semua pengaturan berhasil tersimpan permanen!', 'cloud-check', 'text-green-500');
+                window.showToast('Tersimpan di Tabel Supabase!', 'cloud-check', 'text-green-500');
             } catch(e) {
-                console.error("Gagal simpan ke Supabase:", e);
-                window.showToast('Gagal terhubung ke Cloud!', 'x-circle', 'text-red-500');
+                window.showToast('Gagal simpan Cloud: ' + (e.message || 'Cek koneksi tabel'), 'x-circle', 'text-red-500');
             }
             window.render();
         }
 
         window.showToast = function(msg, icon = 'check-circle', color = 'text-green-500') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 ${color}"></i> ${msg}`;
-            container.appendChild(toast);
+            const container = document.getElementById('toast-container'); 
+            if(!container) return;
+            const toast = document.createElement('div'); 
+            toast.className = 'toast'; 
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 ${color}"></i> ${msg}`; 
+            container.appendChild(toast); 
             if (window.lucide) lucide.createIcons();
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
-
-        window.logActivity = function(action, target, type, color = 'blue') {
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-            window.DB.logs.unshift({ time: timeStr, user: window.state.user.name, action, target, type, color });
+        window.logActivity = function(action, target, type, color = 'blue') { 
+            const now = new Date(); 
+            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`; 
+            window.DB.logs.unshift({ time: timeStr, user: window.state.user.name, action, target, type, color }); 
             if(window.DB.logs.length > 50) window.DB.logs.pop(); 
-            // Auto save log ke cloud
-            window.globalSave();
+            if(supabaseClient) window.globalSave(); 
         }
-
-        window.openModal = function(htmlContent) {
+        window.openModal = function(htmlContent) { 
+            const overlay = document.getElementById('modal-overlay'); 
+            const body = document.getElementById('modal-body'); 
+            if(body) body.innerHTML = htmlContent; 
+            if(overlay) overlay.classList.add('show'); 
+            if (window.lucide) lucide.createIcons(); 
+        }
+        window.closeModal = function(e) { 
+            if(e && e.target && e.target.id !== 'modal-overlay' && e.type === 'click') return; 
             const overlay = document.getElementById('modal-overlay');
-            const body = document.getElementById('modal-body');
-            body.innerHTML = htmlContent;
-            overlay.classList.add('show');
-            if (window.lucide) lucide.createIcons();
+            if(overlay) overlay.classList.remove('show'); 
         }
 
-        window.closeModal = function(e) {
-            if(e && e.target.id !== 'modal-overlay' && e.type === 'click') return; 
-            document.getElementById('modal-overlay').classList.remove('show');
-        }
+        let dragSrcEl = null; let dragType = null; let dragId = null;
+        window.handleDragStart = function(e, id, type) { dragSrcEl = e.target.closest('.draggable-row'); dragType = type; dragId = id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); if(dragSrcEl) dragSrcEl.classList.add('dragging'); }
+        window.handleDragOver = function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const tr = e.target.closest('.draggable-row'); if (tr && tr !== dragSrcEl) { tr.classList.add('drag-over'); } return false; }
+        window.handleDragLeave = function(e) { const tr = e.target.closest('.draggable-row'); if (tr) tr.classList.remove('drag-over'); }
+        window.handleDrop = function(e, targetId, type) { e.stopPropagation(); const tr = e.target.closest('.draggable-row'); if (tr) tr.classList.remove('drag-over'); if (dragSrcEl && dragType === type && dragId !== targetId) { let arr = (type === 'menu') ? window.DB.menus : window.DB.apps; const fromIdx = arr.findIndex(item => item.id == dragId); const toIdx = arr.findIndex(item => item.id == targetId); if (fromIdx !== -1 && toIdx !== -1) { const [movedItem] = arr.splice(fromIdx, 1); arr.splice(toIdx, 0, movedItem); if (type === 'menu') { arr.forEach((m, idx) => m.order = idx + 1); } window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue'); window.render(); } } return false; }
+        window.handleDragEnd = function(e) { if (dragSrcEl) dragSrcEl.classList.remove('dragging'); document.querySelectorAll('.draggable-row').forEach(el => el.classList.remove('drag-over')); }
+        window.enableDrag = function(btn) { const row = btn.closest('.draggable-row'); if(row) row.setAttribute('draggable', 'true'); }
+        window.disableDrag = function(btn) { const row = btn.closest('.draggable-row'); if(row) row.setAttribute('draggable', 'false'); }
 
-        // ==========================================
-        // DRAG & DROP HANDLERS (NATIVE HTML5)
-        // ==========================================
-        let dragSrcEl = null;
-        let dragType = null;
-        let dragId = null;
-
-        window.handleDragStart = function(e, id, type) {
-            dragSrcEl = e.target.closest('.draggable-row');
-            dragType = type;
-            dragId = id;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', id);
-            dragSrcEl.classList.add('dragging');
-        }
-
-        window.handleDragOver = function(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const tr = e.target.closest('.draggable-row');
-            if (tr && tr !== dragSrcEl) {
-                tr.classList.add('drag-over');
-            }
-            return false;
-        }
-
-        window.handleDragLeave = function(e) {
-            const tr = e.target.closest('.draggable-row');
-            if (tr) tr.classList.remove('drag-over');
-        }
-
-        window.handleDrop = function(e, targetId, type) {
-            e.stopPropagation();
-            const tr = e.target.closest('.draggable-row');
-            if (tr) tr.classList.remove('drag-over');
-
-            if (dragSrcEl && dragType === type && dragId !== targetId) {
-                let arr = (type === 'menu') ? window.DB.menus : window.DB.apps;
-                const fromIdx = arr.findIndex(item => item.id == dragId);
-                const toIdx = arr.findIndex(item => item.id == targetId);
-
-                if (fromIdx !== -1 && toIdx !== -1) {
-                    const [movedItem] = arr.splice(fromIdx, 1);
-                    arr.splice(toIdx, 0, movedItem);
-
-                    if (type === 'menu') {
-                        arr.forEach((m, idx) => m.order = idx + 1);
-                    }
-
-                    window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue');
-                    window.render();
-                    window.globalSave(); // Auto save struktur ke Cloud
-                }
-            }
-            return false;
-        }
-
-        window.handleDragEnd = function(e) {
-            if (dragSrcEl) dragSrcEl.classList.remove('dragging');
-            document.querySelectorAll('.draggable-row').forEach(el => el.classList.remove('drag-over'));
-        }
-
-        window.enableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'true'); }
-        window.disableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'false'); }
-
-
-        // ==========================================
-        // INLINE EDITING LOGIC
-        // ==========================================
         window.startEditMenu = function(id) { window.state.editingMenuId = id; window.render(); }
         window.cancelEditMenu = function() { window.state.editingMenuId = null; window.render(); }
+        window.saveMenuInline = function(id) { 
+            const menu = window.DB.menus.find(m => m.id === id); 
+            if (menu) { 
+                const nameEl = document.getElementById(`editMenuName-${id}`);
+                const iconEl = document.getElementById(`editMenuIcon-${id}`);
+                const urlEl = document.getElementById(`editMenuUrl-${id}`);
+                if(nameEl) menu.name = nameEl.value; 
+                if(iconEl) menu.icon = iconEl.value; 
+                if (menu.type === 'iframe' && urlEl) { menu.url = urlEl.value; } 
+                window.logActivity('Mengubah detail menu', menu.name, 'Menu Portal', 'blue'); 
+                window.showToast('Menu berhasil diperbarui!'); 
+            } 
+            window.state.editingMenuId = null; 
+            window.render(); 
+        }
+        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => m.id === id); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); } }
         
-        window.saveMenuInline = function(id) {
-            const menu = window.DB.menus.find(m => m.id === id);
-            if (menu) {
-                menu.name = document.getElementById(`editMenuName-${id}`).value;
-                menu.icon = document.getElementById(`editMenuIcon-${id}`).value;
-                if (menu.type === 'iframe') {
-                    menu.url = document.getElementById(`editMenuUrl-${id}`).value;
-                }
-                window.logActivity('Mengubah detail menu', menu.name, 'Menu Portal', 'blue');
-                window.showToast('Menu berhasil diperbarui!');
-            }
-            window.state.editingMenuId = null;
-            window.render();
-            window.globalSave();
-        }
-
-        window.toggleMenuVisibility = function(id) {
-            const menu = window.DB.menus.find(m => m.id === id);
-            if (menu) {
-                menu.visible = !menu.visible;
-                window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange');
-                window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`);
-                window.render();
-                window.globalSave();
-            }
-        }
-
         window.startEditApp = function(id) { window.state.editingAppId = id; window.render(); }
         window.cancelEditApp = function() { window.state.editingAppId = null; window.render(); }
-
-        window.toggleUmumInline = function(id) {
-            const isUmum = document.getElementById(`editAppRole-Umum-${id}`).checked;
-            const cbPegawai = document.getElementById(`editAppRole-Pegawai-${id}`);
-            const cbWarid = document.getElementById(`editAppRole-Warid-${id}`);
-            if (isUmum) {
-                cbPegawai.checked = false; cbPegawai.disabled = true;
-                cbWarid.checked = false; cbWarid.disabled = true;
-            } else {
-                cbPegawai.disabled = false; cbWarid.disabled = false;
-            }
+        window.toggleUmumInline = function(id) { 
+            const isUmum = document.getElementById(`editAppRole-Umum-${id}`)?.checked; 
+            const cbPegawai = document.getElementById(`editAppRole-Pegawai-${id}`); 
+            const cbWarid = document.getElementById(`editAppRole-Warid-${id}`); 
+            if(!cbPegawai || !cbWarid) return;
+            if (isUmum) { cbPegawai.checked = false; cbPegawai.disabled = true; cbWarid.checked = false; cbWarid.disabled = true; } 
+            else { cbPegawai.disabled = false; cbWarid.disabled = false; } 
         }
-
-        window.saveAppInline = function(id) {
-            const app = window.DB.apps.find(a => a.id === id);
-            if (app) {
-                app.name = document.getElementById(`editAppName-${id}`).value;
-                app.icon = document.getElementById(`editAppIcon-${id}`).value;
-                app.url = document.getElementById(`editAppUrl-${id}`).value;
-                app.section = document.getElementById(`editAppSection-${id}`).value;
-                
-                const colorVal = document.getElementById(`editAppColor-${id}`).value;
-                const foundColor = AVAILABLE_COLORS.find(c => c.id === colorVal);
-                if(foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; }
-
-                let newRoles = []; 
-                if (document.getElementById(`editAppRole-Umum-${id}`).checked) {
-                    newRoles.push('Umum');
-                } else {
-                    if (document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai');
-                    if (document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid');
+        window.saveAppInline = function(id) { 
+            const app = window.DB.apps.find(a => a.id === id); 
+            if (app) { 
+                const nameEl = document.getElementById(`editAppName-${id}`);
+                const iconEl = document.getElementById(`editAppIcon-${id}`);
+                const urlEl = document.getElementById(`editAppUrl-${id}`);
+                const secEl = document.getElementById(`editAppSection-${id}`);
+                const colEl = document.getElementById(`editAppColor-${id}`);
+                if(nameEl) app.name = nameEl.value; 
+                if(iconEl) app.icon = iconEl.value; 
+                if(urlEl) app.url = urlEl.value; 
+                if(secEl) app.section = secEl.value; 
+                if(colEl) {
+                    const colorVal = colEl.value; 
+                    const foundColor = AVAILABLE_COLORS.find(c => c.id === colorVal); 
+                    if(foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; } 
                 }
-                app.roles = newRoles;
-
-                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue');
-                window.showToast('Aplikasi berhasil diperbarui!');
-            }
-            window.state.editingAppId = null;
-            window.render();
-            window.globalSave();
+                let newRoles = []; 
+                if (document.getElementById(`editAppRole-Umum-${id}`)?.checked) { newRoles.push('Umum'); } 
+                else { 
+                    if (document.getElementById(`editAppRole-Pegawai-${id}`)?.checked) newRoles.push('Pegawai'); 
+                    if (document.getElementById(`editAppRole-Warid-${id}`)?.checked) newRoles.push('Warid'); 
+                } 
+                app.roles = newRoles; 
+                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue'); 
+                window.showToast('Aplikasi berhasil diperbarui!'); 
+            } 
+            window.state.editingAppId = null; 
+            window.render(); 
         }
+        window.toggleAppStatus = function(id) { const app = window.DB.apps.find(a => a.id === id); if (app) { app.status = !app.status; window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red'); window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`); window.render(); } }
+        window.toggleUserStatus = function(id) { const user = window.DB.users.find(u => u.id === id); if (user && user.id !== window.state.user.id) { user.status = !user.status; window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red'); window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`); window.render(); } }
 
-        window.toggleAppStatus = function(id) {
-            const app = window.DB.apps.find(a => a.id === id);
-            if (app) {
-                app.status = !app.status;
-                window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
-                window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
-                window.render();
-                window.globalSave();
-            }
-        }
+        window.showAddUserModal = function() { const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid']; const roleOptions = roles.map(r => `<option value="${r}">${r}</option>`).join(''); const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Pengguna</h2></div><form onsubmit="saveNewUser(event)" class="flex flex-col gap-3"><input type="text" id="userName" required placeholder="Nama Lengkap" class="input-glass"><select id="userRole" class="input-glass">${roleOptions}</select><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan User</button></div></form>`; window.openModal(html); }
+        window.saveNewUser = function(event) { event.preventDefault(); const name = document.getElementById('userName').value; const role = document.getElementById('userRole').value; const newUser = { id: Date.now(), name: name, email: name.toLowerCase().replace(/ /g, '') + '@alka.co.id', role: role, status: true, lastLogin: 'Belum pernah' }; window.DB.users.unshift(newUser); window.logActivity('Menambahkan pengguna baru', name, 'Pengguna', 'blue'); window.showToast('Pengguna berhasil ditambahkan!'); window.closeModal(); window.render(); }
+        window.showEditUserModal = function(id) { const user = window.DB.users.find(u => u.id === id); if(!user) return; const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid']; const roleOptions = roles.map(r => `<option value="${r}" ${user.role === r ? 'selected' : ''}>${r}</option>`).join(''); const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Edit Pengguna</h2></div><form onsubmit="saveEditUser(event, ${user.id})" class="flex flex-col gap-3"><input type="text" id="editUserName" required value="${user.name}" class="input-glass"><select id="editUserRole" class="input-glass">${roleOptions}</select><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan</button></div></form>`; window.openModal(html); }
+        window.saveEditUser = function(event, id) { event.preventDefault(); const user = window.DB.users.find(u => u.id === id); if(user) { user.name = document.getElementById('editUserName').value; user.role = document.getElementById('editUserRole').value; window.logActivity('Mengubah data pengguna', user.name, 'Pengguna', 'purple'); window.showToast('Data berhasil diperbarui!'); window.closeModal(); window.render(); } }
 
-        window.toggleUserStatus = function(id) {
-            const user = window.DB.users.find(u => u.id === id);
-            if (user && user.id !== window.state.user.id) {
-                user.status = !user.status;
-                window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red');
-                window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
-                window.render();
-                window.globalSave();
-            }
-        }
-
-        window.showAddUserModal = function() {
-            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
-            const roleOptions = roles.map(r => `<option value="${r}">${r}</option>`).join('');
-            const html = `
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Pengguna</h2>
-                </div>
-                <form onsubmit="saveNewUser(event)" class="flex flex-col gap-3">
-                    <input type="text" id="userName" required placeholder="Nama Lengkap" class="input-glass">
-                    <select id="userRole" class="input-glass">${roleOptions}</select>
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan User</button>
-                    </div>
-                </form>`;
+        // GURU MANAGEMENT MODALS & FUNCTIONS
+        window.showAddGuruModal = function() {
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Pegawai Baru</h2></div><form onsubmit="saveNewGuru(event)" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Nama Lengkap</label><input type="text" id="gNama" required class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">Gelar</label><input type="text" id="gGelar" class="input-glass" placeholder="S.Pd., M.Pd."></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">NIK</label><input type="text" id="gNik" class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">NBM / NIP</label><input type="text" id="gNbm" class="input-glass"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Jenis Kelamin</label><select id="gJk" class="input-glass"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div><div><label class="text-[11px] font-bold text-brand-muted">No. WhatsApp</label><input type="text" id="gNoWa" class="input-glass"></div></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Pegawai</button></div></form>`;
             window.openModal(html);
         }
-
-        window.saveNewUser = function(event) {
-            event.preventDefault();
-            const name = document.getElementById('userName').value;
-            const role = document.getElementById('userRole').value;
-            const newUser = { id: Date.now(), name: name, email: name.toLowerCase().replace(/ /g, '') + '@alka.co.id', role: role, status: true, lastLogin: 'Belum pernah' };
-            window.DB.users.unshift(newUser);
-            window.logActivity('Menambahkan pengguna baru', name, 'Pengguna', 'blue');
-            window.showToast('Pengguna berhasil ditambahkan!');
+        window.saveNewGuru = function(e) {
+            e.preventDefault();
+            const newG = {
+                id: Date.now(),
+                nama: document.getElementById('gNama').value,
+                namaGelar: document.getElementById('gGelar').value,
+                nik: document.getElementById('gNik').value,
+                nbm: document.getElementById('gNbm').value,
+                jk: document.getElementById('gJk').value,
+                noWa: document.getElementById('gNoWa').value,
+                waliKelas: '-', tugasTambahan: '-', pelatihEkstra: '-',
+                mapel1: '', kelasMapel1: '', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '',
+                tempatLahir: '-', tanggalLahir: '-', provinsi: '-', kabupaten: '-', kecamatan: '-', desa: '-', alamatDetail: '-',
+                jenisKepegawaian: 'GTY', statusKepegawaian: 'Aktif', pendidikanTerakhir: '-', ptTerakhir: '-', prodi: '-', tahunMasuk: '-', tahunLulus: '-',
+                ayahNama: '-', ayahTahun: '-', ayahNik: '-', ayahPendidikan: '-', ibuNama: '-', ibuTahun: '-', ibuNik: '-', ibuPendidikan: '-', linkKk: '#', linkIjazah: '#', status: true
+            };
+            window.DB.guru.unshift(newG);
+            window.logActivity('Menambahkan Pegawai', newG.nama, 'Pegawai', 'blue');
+            window.showToast('Pegawai baru berhasil ditambahkan!');
             window.closeModal();
             window.render();
-            window.globalSave();
         }
 
-        window.showEditUserModal = function(id) {
-            const user = window.DB.users.find(u => u.id === id);
-            if(!user) return;
-            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
-            const roleOptions = roles.map(r => `<option value="${r}" ${user.role === r ? 'selected' : ''}>${r}</option>`).join('');
-            const html = `
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-brand-navy mb-1">Edit Pengguna</h2>
-                </div>
-                <form onsubmit="saveEditUser(event, ${user.id})" class="flex flex-col gap-3">
-                    <input type="text" id="editUserName" required value="${user.name}" class="input-glass">
-                    <select id="editUserRole" class="input-glass">${roleOptions}</select>
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan</button>
-                    </div>
-                </form>`;
+        window.showEditGuruModal = function(id) {
+            const g = window.DB.guru.find(item => item.id == id);
+            if(!g) return;
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Edit Biodata Pegawai</h2></div><form onsubmit="saveEditGuru(event, ${g.id})" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Nama Lengkap</label><input type="text" id="egNama" value="${g.nama || ''}" required class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">Gelar</label><input type="text" id="egGelar" value="${g.namaGelar || ''}" class="input-glass"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">NIK</label><input type="text" id="egNik" value="${g.nik || ''}" class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">NBM / NIP</label><input type="text" id="egNbm" value="${g.nbm || ''}" class="input-glass"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Jenis Kelamin</label><select id="egJk" class="input-glass"><option value="L" ${g.jk === 'L' ? 'selected' : ''}>Laki-laki</option><option value="P" ${g.jk === 'P' ? 'selected' : ''}>Perempuan</option></select></div><div><label class="text-[11px] font-bold text-brand-muted">No. WhatsApp</label><input type="text" id="egNoWa" value="${g.noWa || ''}" class="input-glass"></div></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Perubahan</button></div></form>`;
             window.openModal(html);
         }
-
-        window.saveEditUser = function(event, id) {
-            event.preventDefault();
-            const user = window.DB.users.find(u => u.id === id);
-            if(user) {
-                user.name = document.getElementById('editUserName').value;
-                user.role = document.getElementById('editUserRole').value;
-                window.logActivity('Mengubah data pengguna', user.name, 'Pengguna', 'purple');
-                window.showToast('Data berhasil diperbarui!');
+        window.saveEditGuru = function(e, id) {
+            e.preventDefault();
+            const g = window.DB.guru.find(item => item.id == id);
+            if(g) {
+                g.nama = document.getElementById('egNama').value;
+                g.namaGelar = document.getElementById('egGelar').value;
+                g.nik = document.getElementById('egNik').value;
+                g.nbm = document.getElementById('egNbm').value;
+                g.jk = document.getElementById('egJk').value;
+                g.noWa = document.getElementById('egNoWa').value;
+                window.logActivity('Mengubah Biodata Pegawai', g.nama, 'Pegawai', 'purple');
+                window.showToast('Biodata pegawai berhasil diperbarui!');
                 window.closeModal();
                 window.render();
-                window.globalSave();
             }
         }
 
-        window.navigate = function(hash) {
-            window.closeAllPopups();
-            window.location.hash = hash;
-            window.state.path = hash;
-            window.state.zoom = 1.0;
+        // TUGAS PEGAWAI MODALS & FUNCTIONS
+        window.showAddTugasModal = function() {
+            const options = window.DB.guru.map(g => `<option value="${g.id}">${g.nama} ${g.namaGelar ? '(' + g.namaGelar + ')' : ''}</option>`).join('');
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Tugas Pegawai / Guru</h2><p class="text-[12px] text-brand-muted">Pilih pegawai dari data yang sudah ada, lalu atur tugas dan mengajarnya.</p></div><form onsubmit="saveNewTugas(event)" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div><label class="text-[11px] font-bold text-brand-muted">Pilih Pegawai</label><select id="tGuruId" class="input-glass font-bold">${options}</select></div><div class="grid grid-cols-3 gap-2"><div><label class="text-[10px] font-bold text-brand-muted">Wali Kelas</label><input type="text" id="tWali" class="input-glass" placeholder="6A"></div><div><label class="text-[10px] font-bold text-brand-muted">Tugas Tambahan</label><input type="text" id="tTambahan" class="input-glass" placeholder="Wakasek"></div><div><label class="text-[10px] font-bold text-brand-muted">Pelatih Ekstra</label><input type="text" id="tEkstra" class="input-glass" placeholder="Pramuka"></div></div><hr class="border-white/40 my-1"><p class="text-[11px] font-bold text-brand-navy">Jadwal Mengajar (Mapel & Kelas)</p><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel1" placeholder="Mapel 1" class="input-glass"><input type="text" id="tKelas1" placeholder="Kelas Mapel 1" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel2" placeholder="Mapel 2" class="input-glass"><input type="text" id="tKelas2" placeholder="Kelas Mapel 2" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel3" placeholder="Mapel 3" class="input-glass"><input type="text" id="tKelas3" placeholder="Kelas Mapel 3" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel4" placeholder="Mapel 4" class="input-glass"><input type="text" id="tKelas4" placeholder="Kelas Mapel 4" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel5" placeholder="Mapel 5" class="input-glass"><input type="text" id="tKelas5" placeholder="Kelas Mapel 5" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="tMapel6" placeholder="Mapel 6" class="input-glass"><input type="text" id="tKelas6" placeholder="Kelas Mapel 6" class="input-glass col-span-2"></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Tugas</button></div></form>`;
+            window.openModal(html);
+        }
+        window.saveNewTugas = function(e) {
+            e.preventDefault();
+            const gId = document.getElementById('tGuruId').value;
+            const g = window.DB.guru.find(item => item.id == gId);
+            if(g) {
+                g.waliKelas = document.getElementById('tWali').value || '-';
+                g.tugasTambahan = document.getElementById('tTambahan').value || '-';
+                g.pelatihEkstra = document.getElementById('tEkstra').value || '-';
+                g.mapel1 = document.getElementById('tMapel1').value || '';
+                g.kelasMapel1 = document.getElementById('tKelas1').value || '';
+                g.mapel2 = document.getElementById('tMapel2').value || '';
+                g.kelasMapel2 = document.getElementById('tKelas2').value || '';
+                g.mapel3 = document.getElementById('tMapel3').value || '';
+                g.kelasMapel3 = document.getElementById('tKelas3').value || '';
+                g.mapel4 = document.getElementById('tMapel4').value || '';
+                g.kelasMapel4 = document.getElementById('tKelas4').value || '';
+                g.mapel5 = document.getElementById('tMapel5').value || '';
+                g.kelasMapel5 = document.getElementById('tKelas5').value || '';
+                g.mapel6 = document.getElementById('tMapel6').value || '';
+                g.kelasMapel6 = document.getElementById('tKelas6').value || '';
+                window.logActivity('Mengatur Tugas Pegawai', g.nama, 'Pegawai', 'blue');
+                window.showToast('Tugas pegawai berhasil disimpan!');
+                window.closeModal();
+                window.render();
+            }
+        }
+
+        window.showEditTugasModal = function(id) {
+            const g = window.DB.guru.find(item => item.id == id);
+            if(!g) return;
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Edit Tugas Pegawai</h2><p class="text-[12px] text-brand-muted">Pegawai: <strong class="text-brand-blue">${g.nama}</strong></p></div><form onsubmit="saveEditTugas(event, ${g.id})" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div class="grid grid-cols-3 gap-2"><div><label class="text-[10px] font-bold text-brand-muted">Wali Kelas</label><input type="text" id="etWali" value="${g.waliKelas || ''}" class="input-glass"></div><div><label class="text-[10px] font-bold text-brand-muted">Tugas Tambahan</label><input type="text" id="etTambahan" value="${g.tugasTambahan || ''}" class="input-glass"></div><div><label class="text-[10px] font-bold text-brand-muted">Pelatih Ekstra</label><input type="text" id="etEkstra" value="${g.pelatihEkstra || ''}" class="input-glass"></div></div><hr class="border-white/40 my-1"><p class="text-[11px] font-bold text-brand-navy">Jadwal Mengajar (Mapel & Kelas)</p><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel1" value="${g.mapel1 || ''}" placeholder="Mapel 1" class="input-glass"><input type="text" id="etKelas1" value="${g.kelasMapel1 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel2" value="${g.mapel2 || ''}" placeholder="Mapel 2" class="input-glass"><input type="text" id="etKelas2" value="${g.kelasMapel2 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel3" value="${g.mapel3 || ''}" placeholder="Mapel 3" class="input-glass"><input type="text" id="etKelas3" value="${g.kelasMapel3 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel4" value="${g.mapel4 || ''}" placeholder="Mapel 4" class="input-glass"><input type="text" id="etKelas4" value="${g.kelasMapel4 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel5" value="${g.mapel5 || ''}" placeholder="Mapel 5" class="input-glass"><input type="text" id="etKelas5" value="${g.kelasMapel5 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="grid grid-cols-3 gap-2"><input type="text" id="etMapel6" value="${g.mapel6 || ''}" placeholder="Mapel 6" class="input-glass"><input type="text" id="etKelas6" value="${g.kelasMapel6 || ''}" placeholder="Kelas" class="input-glass col-span-2"></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Perubahan</button></div></form>`;
+            window.openModal(html);
+        }
+        window.saveEditTugas = function(e, id) {
+            e.preventDefault();
+            const g = window.DB.guru.find(item => item.id == id);
+            if(g) {
+                g.waliKelas = document.getElementById('etWali').value || '-';
+                g.tugasTambahan = document.getElementById('etTambahan').value || '-';
+                g.pelatihEkstra = document.getElementById('etEkstra').value || '-';
+                g.mapel1 = document.getElementById('etMapel1').value || '';
+                g.kelasMapel1 = document.getElementById('etKelas1').value || '';
+                g.mapel2 = document.getElementById('etMapel2').value || '';
+                g.kelasMapel2 = document.getElementById('etKelas2').value || '';
+                g.mapel3 = document.getElementById('etMapel3').value || '';
+                g.kelasMapel3 = document.getElementById('etKelas3').value || '';
+                g.mapel4 = document.getElementById('etMapel4').value || '';
+                g.kelasMapel4 = document.getElementById('etKelas4').value || '';
+                g.mapel5 = document.getElementById('etMapel5').value || '';
+                g.kelasMapel5 = document.getElementById('etKelas5').value || '';
+                g.mapel6 = document.getElementById('etMapel6').value || '';
+                g.kelasMapel6 = document.getElementById('etKelas6').value || '';
+                window.logActivity('Mengubah Tugas Pegawai', g.nama, 'Pegawai', 'purple');
+                window.showToast('Tugas pegawai berhasil diperbarui!');
+                window.closeModal();
+                window.render();
+            }
+        }
+
+        // SISWA MANAGEMENT MODALS & FUNCTIONS
+        window.showAddSiswaModal = function() {
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Siswa Baru</h2></div><form onsubmit="saveNewSiswa(event)" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div class="grid grid-cols-3 gap-2"><div><label class="text-[10px] font-bold text-brand-muted">No. Urut</label><input type="text" id="sNo" required class="input-glass" placeholder="1"></div><div><label class="text-[10px] font-bold text-brand-muted">No. Presensi</label><input type="text" id="sPres" required class="input-glass" placeholder="01"></div><div><label class="text-[10px] font-bold text-brand-muted">Kelas</label><input type="text" id="sKelas" required class="input-glass" placeholder="6A"></div></div><div><label class="text-[11px] font-bold text-brand-muted">Nama Lengkap Siswa</label><input type="text" id="sNama" required class="input-glass"></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">NIS</label><input type="text" id="sNis" class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">NISN</label><input type="text" id="sNisn" class="input-glass"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Jenis Kelamin</label><select id="sLp" class="input-glass"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div><div><label class="text-[11px] font-bold text-brand-muted">Nama Ayah</label><input type="text" id="sAyah" class="input-glass"></div></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Siswa</button></div></form>`;
+            window.openModal(html);
+        }
+        window.saveNewSiswa = function(e) {
+            e.preventDefault();
+            const newS = {
+                id: Date.now(),
+                no: document.getElementById('sNo').value,
+                no_presensi: document.getElementById('sPres').value,
+                kelas: document.getElementById('sKelas').value,
+                nama_siswa: document.getElementById('sNama').value,
+                nis: document.getElementById('sNis').value || '-',
+                nisn: document.getElementById('sNisn').value || '-',
+                l_p: document.getElementById('sLp').value,
+                nama_ayah: document.getElementById('sAyah').value || '-',
+                ekstrakurikuler: '-', nik_anak: '-', agama: 'Islam', anak_ke: '1', tempat_lahir: '-', tgl_lahir: '-', no_kk: '-', tgl_kk: '-',
+                alamat_provinsi: '-', alamat_kabupaten: '-', alamat_kecamatan: '-', alamat_desa: '-', alamat_jalan: '-', alamat_rt: '-', alamat_rw: '-',
+                sekolah_nama: '-', sekolah_npsn: '-', sekolah_provinsi: '-', sekolah_kabupaten: '-', sekolah_kecamatan: '-',
+                ayah_nik: '-', ayah_tahun_lahir: '-', ayah_pendidikan: '-', ayah_pekerjaan: '-', ayah_penghasilan: '-',
+                nama_ibu: '-', ibu_nik: '-', ibu_tahun_lahir: '-', ibu_pendidikan: '-', ibu_pekerjaan: '-', ibu_penghasilan: '-',
+                alamat_ortu: '-', nama_wali: '-', kerja_wali: '-', alamat_wali: '-', no_wa: '-', link_kk: '#', link_ijazah: '#', status: true
+            };
+            window.DB.siswa.unshift(newS);
+            window.logActivity('Menambahkan Siswa', newS.nama_siswa, 'Siswa', 'blue');
+            window.showToast('Data siswa berhasil ditambahkan!');
+            window.closeModal();
             window.render();
         }
 
-        window.addEventListener('hashchange', () => {
-            if(window.location.hash !== window.state.path) {
-                window.state.path = window.location.hash || '#home';
+        window.showEditSiswaModal = function(id) {
+            const s = window.DB.siswa.find(item => item.id == id);
+            if(!s) return;
+            const html = `<div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Edit Data Siswa</h2></div><form onsubmit="saveEditSiswa(event, ${s.id})" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto p-1"><div class="grid grid-cols-3 gap-2"><div><label class="text-[10px] font-bold text-brand-muted">No. Urut</label><input type="text" id="esNo" value="${s.no || ''}" required class="input-glass"></div><div><label class="text-[10px] font-bold text-brand-muted">No. Presensi</label><input type="text" id="esPres" value="${s.no_presensi || ''}" required class="input-glass"></div><div><label class="text-[10px] font-bold text-brand-muted">Kelas</label><input type="text" id="esKelas" value="${s.kelas || ''}" required class="input-glass"></div></div><div><label class="text-[11px] font-bold text-brand-muted">Nama Lengkap Siswa</label><input type="text" id="esNama" value="${s.nama_siswa || ''}" required class="input-glass"></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">NIS</label><input type="text" id="esNis" value="${s.nis || ''}" class="input-glass"></div><div><label class="text-[11px] font-bold text-brand-muted">NISN</label><input type="text" id="esNisn" value="${s.nisn || ''}" class="input-glass"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="text-[11px] font-bold text-brand-muted">Jenis Kelamin</label><select id="esLp" class="input-glass"><option value="L" ${s.l_p === 'L' ? 'selected' : ''}>Laki-laki</option><option value="P" ${s.l_p === 'P' ? 'selected' : ''}>Perempuan</option></select></div><div><label class="text-[11px] font-bold text-brand-muted">Nama Ayah</label><input type="text" id="esAyah" value="${s.nama_ayah || ''}" class="input-glass"></div></div><div class="flex justify-end gap-2 mt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Perubahan</button></div></form>`;
+            window.openModal(html);
+        }
+        window.saveEditSiswa = function(e, id) {
+            e.preventDefault();
+            const s = window.DB.siswa.find(item => item.id == id);
+            if(s) {
+                s.no = document.getElementById('esNo').value;
+                s.no_presensi = document.getElementById('esPres').value;
+                s.kelas = document.getElementById('esKelas').value;
+                s.nama_siswa = document.getElementById('esNama').value;
+                s.nis = document.getElementById('esNis').value;
+                s.nisn = document.getElementById('esNisn').value;
+                s.l_p = document.getElementById('esLp').value;
+                s.nama_ayah = document.getElementById('esAyah').value;
+                window.logActivity('Mengubah Data Siswa', s.nama_siswa, 'Siswa', 'purple');
+                window.showToast('Data siswa berhasil diperbarui!');
+                window.closeModal();
                 window.render();
             }
-        });
-
-        window.togglePopup = function(id, e) {
-            if(e) e.stopPropagation();
-            window.closeAllPopups();
-            const el = document.getElementById(id);
-            if(el) {
-                el.classList.toggle('show');
-                if(id.startsWith('notif')) window.renderNotifItems();
-            }
         }
 
-        window.switchNotifTab = function(tab, e) {
-            if(e) e.stopPropagation();
-            window.state.notifTab = tab;
-            window.renderNotifItems();
+        // EXCEL DOWNLOAD & UPLOAD HANDLERS
+        window.downloadFormatGuru = function() {
+            const ws = XLSX.utils.json_to_sheet([{ id: 1, nama: 'Contoh Guru', namaGelar: 'S.Pd.', nik: '3201...', nbm: '12345', jk: 'L', noWa: '0812...' }]);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Format Guru"); XLSX.writeFile(wb, "Format_Master_Pegawai.xlsx");
+        }
+        window.downloadFormatTugas = function() {
+            const ws = XLSX.utils.json_to_sheet([{ id: 1, nama: 'Contoh Guru', waliKelas: '6A', tugasTambahan: 'Wakasek', pelatihEkstra: 'Pramuka', mapel1: 'PAI', kelasMapel1: '1A, 1B', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '' }]);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Format Tugas"); XLSX.writeFile(wb, "Format_Master_Tugas_Pegawai.xlsx");
+        }
+        window.downloadFormatSiswa = function() {
+            const ws = XLSX.utils.json_to_sheet([{ id: 1, no: '1', no_presensi: '01', kelas: '6A', nama_siswa: 'Contoh Siswa', nis: '101', nisn: '001', l_p: 'L', nama_ayah: 'Ayah Siswa' }]);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Format Siswa"); XLSX.writeFile(wb, "Format_Master_Siswa.xlsx");
         }
 
-        window.closeAllPopups = function() {
-            document.querySelectorAll('.glass-popup').forEach(el => el.classList.remove('show'));
-            const search = document.getElementById('search-dropdown');
-            if(search) search.classList.add('hidden');
+        window.handleUploadGuru = function(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if(json && json.length > 0) {
+                    json.forEach((item, idx) => {
+                        window.DB.guru.unshift({
+                            id: Date.now() + idx,
+                            nama: item.nama || item.Nama || 'Tanpa Nama',
+                            namaGelar: item.namaGelar || item.Gelar || '',
+                            nik: item.nik || item.NIK || '-',
+                            nbm: item.nbm || item.NBM || '-',
+                            jk: item.jk || item.JK || 'L',
+                            noWa: item.noWa || item.WhatsApp || '-',
+                            waliKelas: item.waliKelas || '-', tugasTambahan: item.tugasTambahan || '-', pelatihEkstra: item.pelatihEkstra || '-',
+                            mapel1: item.mapel1 || '', kelasMapel1: item.kelasMapel1 || '', mapel2: item.mapel2 || '', kelasMapel2: item.kelasMapel2 || '',
+                            mapel3: item.mapel3 || '', kelasMapel3: item.kelasMapel3 || '', mapel4: item.mapel4 || '', kelasMapel4: item.kelasMapel4 || '',
+                            mapel5: item.mapel5 || '', kelasMapel5: item.kelasMapel5 || '', mapel6: item.mapel6 || '', kelasMapel6: item.kelasMapel6 || '',
+                            tempatLahir: '-', tanggalLahir: '-', provinsi: '-', kabupaten: '-', kecamatan: '-', desa: '-', alamatDetail: '-',
+                            jenisKepegawaian: 'GTY', statusKepegawaian: 'Aktif', pendidikanTerakhir: '-', ptTerakhir: '-', prodi: '-', tahunMasuk: '-', tahunLulus: '-',
+                            ayahNama: '-', ayahTahun: '-', ayahNik: '-', ayahPendidikan: '-', ibuNama: '-', ibuTahun: '-', ibuNik: '-', ibuPendidikan: '-', linkKk: '#', linkIjazah: '#', status: true
+                        });
+                    });
+                    window.logActivity('Upload Master Pegawai', file.name, 'Pegawai', 'green');
+                    window.showToast(`Berhasil mengimpor ${json.length} data pegawai!`);
+                    window.render();
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
+
+        window.handleUploadTugas = function(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if(json && json.length > 0) {
+                    let count = 0;
+                    json.forEach(item => {
+                        const targetNama = String(item.nama || item.Nama || '').toLowerCase();
+                        const found = window.DB.guru.find(g => g.nama.toLowerCase() === targetNama);
+                        if(found) {
+                            found.waliKelas = item.waliKelas || found.waliKelas;
+                            found.tugasTambahan = item.tugasTambahan || found.tugasTambahan;
+                            found.pelatihEkstra = item.pelatihEkstra || found.pelatihEkstra;
+                            found.mapel1 = item.mapel1 || found.mapel1; found.kelasMapel1 = item.kelasMapel1 || found.kelasMapel1;
+                            found.mapel2 = item.mapel2 || found.mapel2; found.kelasMapel2 = item.kelasMapel2 || found.kelasMapel2;
+                            found.mapel3 = item.mapel3 || found.mapel3; found.kelasMapel3 = item.kelasMapel3 || found.kelasMapel3;
+                            found.mapel4 = item.mapel4 || found.mapel4; found.kelasMapel4 = item.kelasMapel4 || found.kelasMapel4;
+                            found.mapel5 = item.mapel5 || found.mapel5; found.kelasMapel5 = item.kelasMapel5 || found.kelasMapel5;
+                            found.mapel6 = item.mapel6 || found.mapel6; found.kelasMapel6 = item.kelasMapel6 || found.kelasMapel6;
+                            count++;
+                        }
+                    });
+                    window.logActivity('Upload Master Tugas Pegawai', file.name, 'Pegawai', 'green');
+                    window.showToast(`Berhasil memperbarui tugas untuk ${count} pegawai!`);
+                    window.render();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        window.handleUploadSiswa = function(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if(json && json.length > 0) {
+                    json.forEach((item, idx) => {
+                        window.DB.siswa.unshift({
+                            id: Date.now() + idx,
+                            no: String(item.no || item.No || (idx + 1)),
+                            no_presensi: String(item.no_presensi || item.Presensi || '01'),
+                            kelas: String(item.kelas || item.Kelas || '6A'),
+                            nama_siswa: item.nama_siswa || item.Nama || 'Siswa Baru',
+                            nis: String(item.nis || item.NIS || '-'),
+                            nisn: String(item.nisn || item.NISN || '-'),
+                            l_p: item.l_p || item.JK || 'L',
+                            nama_ayah: item.nama_ayah || item.Ayah || '-',
+                            ekstrakurikuler: '-', nik_anak: '-', agama: 'Islam', anak_ke: '1', tempat_lahir: '-', tgl_lahir: '-', no_kk: '-', tgl_kk: '-',
+                            alamat_provinsi: '-', alamat_kabupaten: '-', alamat_kecamatan: '-', alamat_desa: '-', alamat_jalan: '-', alamat_rt: '-', alamat_rw: '-',
+                            sekolah_nama: '-', sekolah_npsn: '-', sekolah_provinsi: '-', sekolah_kabupaten: '-', sekolah_kecamatan: '-',
+                            ayah_nik: '-', ayah_tahun_lahir: '-', ayah_pendidikan: '-', ayah_pekerjaan: '-', ayah_penghasilan: '-',
+                            nama_ibu: '-', ibu_nik: '-', ibu_tahun_lahir: '-', ibu_pendidikan: '-', ibu_pekerjaan: '-', ibu_penghasilan: '-',
+                            alamat_ortu: '-', nama_wali: '-', kerja_wali: '-', alamat_wali: '-', no_wa: '-', link_kk: '#', link_ijazah: '#', status: true
+                        });
+                    });
+                    window.logActivity('Upload Master Siswa', file.name, 'Siswa', 'green');
+                    window.showToast(`Berhasil mengimpor ${json.length} data siswa!`);
+                    window.render();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        window.navigate = function(hash) { window.closeAllPopups(); window.location.hash = hash; window.state.path = hash; window.state.zoom = 1.0; window.render(); }
+        window.addEventListener('hashchange', () => { if(window.location.hash !== window.state.path) { window.state.path = window.location.hash || '#home'; window.render(); } });
+        window.togglePopup = function(id, e) { if(e) e.stopPropagation(); window.closeAllPopups(); const el = document.getElementById(id); if(el) { el.classList.toggle('show'); if(id.startsWith('notif')) window.renderNotifItems(); } }
+        window.switchNotifTab = function(tab, e) { if(e) e.stopPropagation(); window.state.notifTab = tab; window.renderNotifItems(); }
+        window.closeAllPopups = function() { document.querySelectorAll('.glass-popup').forEach(el => el.classList.remove('show')); const search = document.getElementById('search-dropdown'); if(search) search.classList.add('hidden'); }
         document.addEventListener('click', window.closeAllPopups);
-
-        window.doSearch = function(query) {
-            const dropdown = document.getElementById('search-dropdown');
-            const resultsContainer = document.getElementById('search-results-list');
-            if (!query || query.trim() === '') { dropdown.classList.add('hidden'); return; }
-            dropdown.classList.remove('hidden');
-            const q = query.toLowerCase();
-            const results = window.DB.apps.filter(a => a.status && (a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && (a.name.toLowerCase().includes(q) || a.cat.toLowerCase().includes(q)));
-            
-            if (results.length === 0) {
-                resultsContainer.innerHTML = `<div class="p-4 text-center text-[12px] text-brand-muted">Tidak ada hasil.</div>`;
-                return;
-            }
-            let html = '';
-            results.forEach(app => {
-                html += `<div onclick="navigate('#app-${app.id}')" class="p-3 hover:bg-white/60 cursor-pointer flex items-center gap-3 border-b border-white/20 last:border-0"><div class="w-8 h-8 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div><div><p class="text-[13px] font-bold text-brand-navy mb-0.5">${app.name}</p><p class="text-[10px] text-brand-muted">${app.cat}</p></div></div>`;
-            });
-            resultsContainer.innerHTML = html;
-            if (window.lucide) lucide.createIcons();
+        window.doSearch = function(query) { 
+            const dropdown = document.getElementById('search-dropdown'); 
+            const resultsContainer = document.getElementById('search-results-list'); 
+            if(!dropdown || !resultsContainer) return;
+            if (!query || query.trim() === '') { dropdown.classList.add('hidden'); return; } 
+            dropdown.classList.remove('hidden'); 
+            const q = query.toLowerCase(); 
+            const results = window.DB.apps.filter(a => a.status && (a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && (a.name.toLowerCase().includes(q) || a.cat.toLowerCase().includes(q))); 
+            if (results.length === 0) { resultsContainer.innerHTML = `<div class="p-4 text-center text-[12px] text-brand-muted">Tidak ada hasil.</div>`; return; } 
+            let html = ''; 
+            results.forEach(app => { html += `<div onclick="navigate('#app-${app.id}')" class="p-3 hover:bg-white/60 cursor-pointer flex items-center gap-3 border-b border-white/20 last:border-0"><div class="w-8 h-8 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div><div><p class="text-[13px] font-bold text-brand-navy mb-0.5">${app.name}</p><p class="text-[10px] text-brand-muted">${app.cat}</p></div></div>`; }); 
+            resultsContainer.innerHTML = html; 
+            if (window.lucide) lucide.createIcons(); 
         }
-
         window.doLogout = function() { window.state.isLoggedIn = false; window.navigate('#login'); }
         window.doLogin = function() { window.state.isLoggedIn = true; window.navigate('#home'); }
-
-        window.changeZoom = function(delta) {
-            window.state.zoom += delta;
-            if (window.state.zoom < 0.5) window.state.zoom = 0.5;
-            if (window.state.zoom > 1.5) window.state.zoom = 1.5;
-            document.querySelectorAll('.zoom-val').forEach(el => { el.innerText = Math.round(window.state.zoom * 100) + '%'; });
-            const wrapper = document.getElementById('content-zoom-wrapper');
-            if(wrapper) { wrapper.style.transform = `scale(${window.state.zoom})`; wrapper.style.width = `${100 / window.state.zoom}%`; wrapper.style.height = `${100 / window.state.zoom}%`; }
-        }
+        window.changeZoom = function(delta) { window.state.zoom += delta; if (window.state.zoom < 0.5) window.state.zoom = 0.5; if (window.state.zoom > 1.5) window.state.zoom = 1.5; document.querySelectorAll('.zoom-val').forEach(el => { el.innerText = Math.round(window.state.zoom * 100) + '%'; }); const wrapper = document.getElementById('content-zoom-wrapper'); if(wrapper) { wrapper.style.transform = `scale(${window.state.zoom})`; wrapper.style.width = `${100 / window.state.zoom}%`; wrapper.style.height = `${100 / window.state.zoom}%`; } }
 
         const logoSvg = `<svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M50 85C25 85 15 65 15 45C15 25 35 15 50 15C50 15 45 40 50 50C55 60 70 65 85 65C85 75 75 85 50 85Z" fill="url(#paint0_linear)"/><path d="M50 15C75 15 85 35 85 55C85 75 65 85 50 85C50 85 55 60 50 50C45 40 30 35 15 35C15 25 25 15 50 15Z" fill="url(#paint1_linear)"/><defs><linearGradient id="paint0_linear" x1="15" y1="50" x2="60" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient><linearGradient id="paint1_linear" x1="85" y1="50" x2="40" y2="15" gradientUnits="userSpaceOnUse"><stop stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs></svg>`;
         const logoLargeSvg = logoSvg.replace('width="24" height="24"', 'width="48" height="48"');
+        window.getZoomControls = function(isMobile) { return `<div class="glass-pill h-[36px] rounded-full flex items-center shrink-0 px-1 border border-white/80 shadow-sm ${isMobile ? 'ml-auto' : 'mr-4'}"><button onclick="changeZoom(-0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">-</button><span class="zoom-val text-[12px] font-bold text-brand-navy w-[44px] text-center border-x border-white/30">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">+</button></div>`; }
+        window.renderNotifItems = function() { const container = document.getElementById('notif-items-container'); if(!container) return; const isSemua = window.state.notifTab === 'semua'; const filtered = isSemua ? NOTIFICATIONS : NOTIFICATIONS.filter(n => !n.read); let html = ''; if (filtered.length === 0) { html = '<p class="text-center text-[11px] text-brand-muted p-4">Tidak ada notifikasi.</p>'; } else { filtered.forEach(n => { html += `<div onclick="navigate('${n.target}')" class="p-2.5 hover:bg-white/60 rounded-xl cursor-pointer flex gap-3 border border-transparent hover:border-white/50 relative">${!n.read ? '<span class="absolute top-3 right-3 w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}<div class="w-9 h-9 rounded-full ${n.bg} flex shrink-0 items-center justify-center border border-white"><i data-lucide="${n.icon}" class="w-[18px] h-[18px] ${n.color}"></i></div><div class="flex-1 min-w-0 pr-4"><p class="text-[12px] font-bold text-brand-navy mb-0.5">${n.title}</p><p class="text-[10px] text-brand-muted line-clamp-2">${n.desc}</p></div></div>`; }); } container.innerHTML = html; if (window.lucide) lucide.createIcons(); const ts = document.getElementById('tab-semua'), tb = document.getElementById('tab-belum'); if(ts && tb) { ts.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; tb.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${!isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; } }
+        window.getNotifPopupHtml = function(idSuffix) { const unreadCount = NOTIFICATIONS.filter(n=>!n.read).length; return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[280px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/60"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/30"><span class="font-extrabold text-[13px] text-brand-navy">Notifikasi</span>${unreadCount > 0 ? `<span class="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">${unreadCount} Baru</span>` : ''}</div><div class="flex border-b border-white/30 bg-white/40 p-1"><button id="tab-semua" onclick="switchNotifTab('semua', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button id="tab-belum" onclick="switchNotifTab('belum_dibaca', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum Dibaca</button></div><div id="notif-items-container" class="p-2 flex flex-col gap-1 max-h-[280px] overflow-y-auto slider-scroll bg-white/20"></div></div>`; }
+        window.getProfilePopupHtml = function(idSuffix) { const userName = window.state.isLoggedIn ? window.state.user.name : 'Pengguna'; const userRole = window.state.isLoggedIn ? window.state.user.role : 'Tamu'; const adminBtn = (window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin')) ? `<button onclick="navigate('#admin-dashboard')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-50 rounded-xl flex items-center gap-2.5 mt-1 border border-blue-200 bg-white"><i data-lucide="shield-alert" class="w-[18px] h-[18px]"></i> Panel Admin</button>` : ''; return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[220px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50"><div class="px-3 py-3 flex items-center gap-3 border-b border-white/40 mb-1 bg-white/30 rounded-t-[16px]"><div class="w-10 h-10 rounded-full border-2 border-white bg-blue-100 overflow-hidden flex items-center justify-center">${window.state.isLoggedIn ? '<img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover">' : '<i data-lucide="user" class="w-5 h-5 text-brand-muted"></i>'}</div><div class="flex-1 min-w-0"><p class="text-[13px] font-bold text-brand-navy truncate">${userName}</p><p class="text-[10px] font-medium text-brand-muted truncate">${userRole}</p></div></div>${adminBtn}<button onclick="navigate('#profil')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-brand-navy hover:bg-white/60 rounded-xl flex items-center gap-2.5 mt-1"><i data-lucide="user-circle" class="w-[18px] h-[18px] text-brand-muted"></i> Profil Saya</button><div class="h-[1px] bg-white/40 my-1 mx-2"></div>${window.state.isLoggedIn ? `<button onclick="doLogout()" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-red-500 hover:bg-red-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-out" class="w-[18px] h-[18px] text-red-400"></i> Keluar</button>` : `<button onclick="navigate('#login')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-500 hover:bg-blue-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-in" class="w-[18px] h-[18px] text-blue-400"></i> Masuk / Login</button>`}</div>`; }
 
-        window.getZoomControls = function(isMobile) {
-            return `<div class="glass-pill h-[36px] rounded-full flex items-center shrink-0 px-1 border border-white/80 shadow-sm ${isMobile ? 'ml-auto' : 'mr-4'}"><button onclick="changeZoom(-0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">-</button><span class="zoom-val text-[12px] font-bold text-brand-navy w-[44px] text-center border-x border-white/30">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">+</button></div>`;
-        }
-
-        window.renderNotifItems = function() {
-            const container = document.getElementById('notif-items-container');
-            if(!container) return;
-            const isSemua = window.state.notifTab === 'semua';
-            const filtered = isSemua ? NOTIFICATIONS : NOTIFICATIONS.filter(n => !n.read);
-            let html = '';
-            if (filtered.length === 0) { html = '<p class="text-center text-[11px] text-brand-muted p-4">Tidak ada notifikasi.</p>'; } 
-            else { filtered.forEach(n => { html += `<div onclick="navigate('${n.target}')" class="p-2.5 hover:bg-white/60 rounded-xl cursor-pointer flex gap-3 border border-transparent hover:border-white/50 relative">${!n.read ? '<span class="absolute top-3 right-3 w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}<div class="w-9 h-9 rounded-full ${n.bg} flex shrink-0 items-center justify-center border border-white"><i data-lucide="${n.icon}" class="w-[18px] h-[18px] ${n.color}"></i></div><div class="flex-1 min-w-0 pr-4"><p class="text-[12px] font-bold text-brand-navy mb-0.5">${n.title}</p><p class="text-[10px] text-brand-muted line-clamp-2">${n.desc}</p></div></div>`; }); }
-            container.innerHTML = html;
-            if (window.lucide) lucide.createIcons();
-            const ts = document.getElementById('tab-semua'), tb = document.getElementById('tab-belum');
-            if(ts && tb) { ts.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; tb.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${!isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`; }
-        }
-
-        window.getNotifPopupHtml = function(idSuffix) {
-            const unreadCount = NOTIFICATIONS.filter(n=>!n.read).length;
-            return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[280px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/60"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/30"><span class="font-extrabold text-[13px] text-brand-navy">Notifikasi</span>${unreadCount > 0 ? `<span class="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">${unreadCount} Baru</span>` : ''}</div><div class="flex border-b border-white/30 bg-white/40 p-1"><button id="tab-semua" onclick="switchNotifTab('semua', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button id="tab-belum" onclick="switchNotifTab('belum_dibaca', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum Dibaca</button></div><div id="notif-items-container" class="p-2 flex flex-col gap-1 max-h-[280px] overflow-y-auto slider-scroll bg-white/20"></div></div>`;
-        }
-
-        window.getProfilePopupHtml = function(idSuffix) {
-            const userName = window.state.isLoggedIn ? window.state.user.name : 'Pengguna';
-            const userRole = window.state.isLoggedIn ? window.state.user.role : 'Tamu';
-            const adminBtn = (window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin')) ? `<button onclick="navigate('#admin-dashboard')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-50 rounded-xl flex items-center gap-2.5 mt-1 border border-blue-200 bg-white"><i data-lucide="shield-alert" class="w-[18px] h-[18px]"></i> Panel Admin</button>` : '';
-            return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[220px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50"><div class="px-3 py-3 flex items-center gap-3 border-b border-white/40 mb-1 bg-white/30 rounded-t-[16px]"><div class="w-10 h-10 rounded-full border-2 border-white bg-blue-100 overflow-hidden flex items-center justify-center">${window.state.isLoggedIn ? '<img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover">' : '<i data-lucide="user" class="w-5 h-5 text-brand-muted"></i>'}</div><div class="flex-1 min-w-0"><p class="text-[13px] font-bold text-brand-navy truncate">${userName}</p><p class="text-[10px] font-medium text-brand-muted truncate">${userRole}</p></div></div>${adminBtn}<button onclick="navigate('#profil')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-brand-navy hover:bg-white/60 rounded-xl flex items-center gap-2.5 mt-1"><i data-lucide="user-circle" class="w-[18px] h-[18px] text-brand-muted"></i> Profil Saya</button><div class="h-[1px] bg-white/40 my-1 mx-2"></div>${window.state.isLoggedIn ? `<button onclick="doLogout()" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-red-500 hover:bg-red-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-out" class="w-[18px] h-[18px] text-red-400"></i> Keluar</button>` : `<button onclick="navigate('#login')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-500 hover:bg-blue-50/50 rounded-xl flex items-center gap-2.5"><i data-lucide="log-in" class="w-[18px] h-[18px] text-blue-400"></i> Masuk / Login</button>`}</div>`;
-        }
-
-        // ==========================================
-        // RENDER VIEWS (PORTAL UTAMA)
-        // ==========================================
         window.renderNativeViews = function(path) {
-            if (path === '#login') {
-                return `<div class="w-full h-full flex items-center justify-center p-5 relative animate-fade"><div class="glass-panel w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10"><div class="mb-6 scale-110">${logoLargeSvg}</div><h2 class="text-[22px] font-extrabold text-brand-navy mb-2 tracking-tight">Selamat Datang</h2><p class="text-[13px] text-brand-muted mb-8 font-medium">Silakan masuk menggunakan akun My Alka Anda.</p><div class="w-full flex flex-col gap-3 mb-6"><input type="text" placeholder="NIS / NIK / Email" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"><input type="password" placeholder="Kata Sandi" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"></div><button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] py-3.5 rounded-2xl shadow-lg transition-all">Masuk Sekarang</button></div></div>`;
-            }
-            if (path === '#profil') { return `<div class="w-full h-full flex items-center justify-center p-5 animate-fade"><div class="glass-panel p-8 rounded-[32px] text-center"><i data-lucide="wrench" class="w-12 h-12 text-brand-muted mx-auto mb-4"></i><h2 class="text-xl font-bold text-brand-navy">Sedang Dibangun</h2><button onclick="navigate('#apps')" class="mt-4 px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-sm">Kembali</button></div></div>`; }
-
-            let currentFilter = 'apps';
-            if(path === '#edukasi') currentFilter = 'edukasi';
+            if (path === '#login') return `<div class="w-full h-full flex items-center justify-center p-5 relative animate-fade"><div class="glass-panel w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10"><div class="mb-6 scale-110">${logoLargeSvg}</div><h2 class="text-[22px] font-extrabold text-brand-navy mb-2 tracking-tight">Selamat Datang</h2><p class="text-[13px] text-brand-muted mb-8 font-medium">Silakan masuk menggunakan akun My Alka.</p><div class="w-full flex flex-col gap-3 mb-6"><input type="text" placeholder="NIS / NIK / Email" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"><input type="password" placeholder="Kata Sandi" class="w-full bg-white/50 border border-white focus:border-blue-400 outline-none rounded-2xl px-4 py-3 text-[13px] font-medium text-brand-navy shadow-sm transition-all"></div><button onclick="doLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] py-3.5 rounded-2xl shadow-lg transition-all">Masuk Sekarang</button></div></div>`;
+            if (path === '#profil') return `<div class="w-full h-full flex items-center justify-center p-5"><div class="glass-panel p-8 rounded-[32px] text-center"><i data-lucide="wrench" class="w-12 h-12 text-brand-muted mx-auto mb-4"></i><h2 class="text-xl font-bold text-brand-navy">Sedang Dibangun</h2><button onclick="navigate('#apps')" class="mt-4 px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-sm">Kembali</button></div></div>`;
             
+            let currentFilter = path === '#edukasi' ? 'edukasi' : 'apps';
             const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn || a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && a.section === currentFilter);
             let appGridHTML = visibleApps.map(app => `<div onclick="navigate('#app-${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none mb-1 truncate">${app.name}</h4><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`).join('');
 
@@ -645,33 +676,15 @@
             const activeMenu = window.DB.menus.find(m => m.hash === window.state.path);
             const isDirectApp = window.state.path.startsWith('#app-');
             
-            let isIframe = false;
-            let iframeUrl = null;
-            let currentTitle = 'Portal';
-            let activeAppObj = null;
-
-            if (activeMenu && activeMenu.type === 'iframe') {
-                isIframe = true;
-                iframeUrl = activeMenu.url;
-                currentTitle = activeMenu.name;
-            } else if (isDirectApp) {
-                const app = window.DB.apps.find(a => '#app-'+a.id === window.state.path && a.status);
-                if (app) {
-                    isIframe = true;
-                    iframeUrl = app.url;
-                    currentTitle = app.name;
-                    activeAppObj = app;
-                }
-            }
+            let isIframe = false; let iframeUrl = null; let currentTitle = 'Portal'; let activeAppObj = null;
+            if (activeMenu && activeMenu.type === 'iframe') { isIframe = true; iframeUrl = activeMenu.url; currentTitle = activeMenu.name; } 
+            else if (isDirectApp) { const app = window.DB.apps.find(a => '#app-'+a.id === window.state.path && a.status); if (app) { isIframe = true; iframeUrl = app.url; currentTitle = app.name; activeAppObj = app; } }
 
             let currentSection = 'apps';
-            if (window.state.path === '#edukasi' || (activeAppObj && activeAppObj.section === 'edukasi')) {
-                currentSection = 'edukasi';
-            }
+            if (window.state.path === '#edukasi' || (activeAppObj && activeAppObj.section === 'edukasi')) currentSection = 'edukasi';
             
             const isAppView = window.state.path === '#apps' || window.state.path === '#edukasi' || isDirectApp;
             const userName = window.state.isLoggedIn ? window.state.user.name : 'Pengguna';
-            
             const visibleMenus = window.DB.menus.filter(m => m.visible).sort((a,b) => a.order - b.order);
             const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn || a.roles.includes('Umum') || a.roles.includes(window.state.user.role)) && a.section === currentSection);
 
@@ -729,13 +742,13 @@
             </div>`;
         }
 
-        // ==========================================
-        // RENDER VIEWS (ADMIN PANELS)
-        // ==========================================
         const ADMIN_MENUS = [
             { id: 'dashboard', name: 'Dashboard', icon: 'home', hash: '#admin-dashboard' },
             { id: 'menu-apps', name: 'Menu & Aplikasi', icon: 'layers', hash: '#admin-menu-apps' },
-            { id: 'users', name: 'Pengguna', icon: 'users', hash: '#admin-users' },
+            { id: 'users', name: 'Hak Akses Portal', icon: 'shield', hash: '#admin-users' },
+            { id: 'guru', name: 'Data Pegawai', icon: 'briefcase', hash: '#admin-guru' },
+            { id: 'tugas-pegawai', name: 'Tugas Pegawai', icon: 'clipboard-list', hash: '#admin-tugas-pegawai' },
+            { id: 'siswa', name: 'Data Siswa & Wali', icon: 'graduation-cap', hash: '#admin-siswa' },
             { id: 'logs', name: 'Log Aktivitas', icon: 'clock', hash: '#admin-logs' }
         ];
 
@@ -743,242 +756,114 @@
         window.getAdminMobileNavLinks = function() { return ADMIN_MENUS.map(m => `<a onclick="navigate('${m.hash}')" class="nav-item ${window.state.path === m.hash ? 'active' : ''}"><div class="nav-indicator"></div><i data-lucide="${m.icon}" class="w-5 h-5"></i><span class="text-[10px]">${m.name}</span></a>`).join(''); }
 
         window.renderAdminDashboard = function() {
-            const stats = [ { title: 'Aplikasi Aktif', val: window.DB.apps.filter(a=>a.status).length, icon: 'check-circle', color: 'green' }, { title: 'Total Pengguna', val: window.DB.users.length, icon: 'users', color: 'purple' }, { title: 'Halaman Portal', val: window.DB.menus.length, icon: 'menu', color: 'orange' } ];
+            const stats = [ { title: 'Aplikasi Aktif', val: window.DB.apps.filter(a=>a.status).length, icon: 'check-circle', color: 'green' }, { title: 'Total Siswa', val: window.DB.siswa.length, icon: 'users', color: 'teal' }, { title: 'Total Pegawai', val: window.DB.guru.length, icon: 'briefcase', color: 'blue' } ];
             const statCards = stats.map(s => `<div class="glass-panel p-5 rounded-[20px] flex flex-col relative overflow-hidden"><div class="flex items-center justify-between mb-4"><div class="w-10 h-10 rounded-xl bg-${s.color}-100 flex items-center justify-center text-${s.color}-500"><i data-lucide="${s.icon}" class="w-5 h-5"></i></div><span class="text-[24px] font-extrabold text-brand-navy">${s.val}</span></div><span class="text-[12px] font-bold text-brand-muted">${s.title}</span></div>`).join('');
-            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><h1 class="text-[20px] font-extrabold text-brand-navy mb-5">Pusat Kendali Admin</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">${statCards}</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aksi Cepat</h3></div><div class="grid grid-cols-2 gap-3">${ADMIN_MENUS.map(m => `<button onclick="navigate('${m.hash}')" class="p-3 bg-white/40 hover:bg-white/70 border border-white/50 rounded-[14px] flex flex-col items-start gap-2.5 transition-colors text-left"><div class="w-7 h-7 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4"></i></div><span class="text-[12px] font-bold text-brand-navy">${m.name}</span></button>`).join('')}</div></div><div class="glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div><div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div></div></div></div>`;
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><h1 class="text-[20px] font-extrabold text-brand-navy mb-5">Pusat Kendali Admin</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">${statCards}</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aksi Cepat</h3></div><div class="grid grid-cols-2 md:grid-cols-3 gap-3">${ADMIN_MENUS.map(m => `<button onclick="navigate('${m.hash}')" class="p-3 bg-white/40 hover:bg-white/70 border border-white/50 rounded-[14px] flex flex-col items-start gap-2.5 transition-colors text-left"><div class="w-7 h-7 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4"></i></div><span class="text-[12px] font-bold text-brand-navy">${m.name}</span></button>`).join('')}</div></div><div class="glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div><div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div></div></div></div>`;
         }
 
         window.triggerAppSearch = function(val) { window.state.searchQueryApp = val.toLowerCase(); window.render(); }
-        
         window.renderAdminMenuApps = function() {
             const rowsMenu = window.DB.menus.sort((a,b) => a.order - b.order).map(m => {
                 if(window.state.editingMenuId === m.id) {
                     return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white/80 flex items-center justify-center text-brand-muted"><i data-lucide="grip-vertical" class="w-4 h-4"></i></div><span class="text-[11px] font-bold ml-1">${m.order}</span></div></td><td class="py-2.5 px-3"><input type="text" id="editMenuName-${m.id}" value="${m.name}" class="input-glass font-bold"></td><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-3 h-3 text-blue-500"></i></div><input type="text" id="editMenuIcon-${m.id}" value="${m.icon}" class="input-glass w-24"></div></td><td class="py-2.5 px-3"><input type="url" id="editMenuUrl-${m.id}" value="${m.url || ''}" ${m.type !== 'iframe' ? 'disabled placeholder="Grup Aplikasi"' : ''} class="input-glass min-w-[200px]"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit Mode</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveMenuInline('${m.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditMenu()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
                 } else {
-                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors"
-                        ondragstart="handleDragStart(event, '${m.id}', 'menu')"
-                        ondragover="return handleDragOver(event)"
-                        ondragleave="handleDragLeave(event)"
-                        ondrop="return handleDrop(event, '${m.id}', 'menu')"
-                        ondragend="handleDragEnd(event)">
-                        <td class="py-3 px-3">
-                            <div class="flex items-center gap-2">
-                                <div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div>
-                                <span class="text-[12px] font-bold">${m.order}</span>
-                            </div>
-                        </td>
-                        <td class="py-3 px-3 font-bold text-[13px] text-brand-navy">${m.name}</td>
-                        <td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4 text-blue-500"></i></div><span class="text-[11px] font-bold text-brand-muted hidden md:inline">${m.icon}</span></div></td>
-                        <td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[250px]" title="${m.url}">${m.type === 'iframe' ? `<a href="${m.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${m.url}</a>` : 'Grup (Kumpulan Aplikasi)'}</div></td>
-                        <td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${m.visible ? 'checked' : ''} onchange="toggleMenuVisibility('${m.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td>
-                        <td class="py-3 px-3 text-right"><button onclick="startEditMenu('${m.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td>
-                    </tr>`;
+                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${m.id}', 'menu')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${m.id}', 'menu')" ondragend="handleDragEnd(event)"><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><span class="text-[12px] font-bold">${m.order}</span></div></td><td class="py-3 px-3 font-bold text-[13px] text-brand-navy">${m.name}</td><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4 text-blue-500"></i></div><span class="text-[11px] font-bold text-brand-muted hidden md:inline">${m.icon}</span></div></td><td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[250px]" title="${m.url}">${m.type === 'iframe' ? `<a href="${m.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${m.url}</a>` : 'Grup (Kumpulan Aplikasi)'}</div></td><td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${m.visible ? 'checked' : ''} onchange="toggleMenuVisibility('${m.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-3 text-right"><button onclick="startEditMenu('${m.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
                 }
             }).join('');
-            
+
             const filteredApps = window.DB.apps.filter(a => a.name.toLowerCase().includes(window.state.searchQueryApp) || a.cat.toLowerCase().includes(window.state.searchQueryApp));
-            
-            const generateAppRows = (appsList, typeKey) => {
-                return appsList.map(app => {
-                    const isUmum = app.roles.includes('Umum');
-                    const isPegawai = app.roles.includes('Pegawai');
-                    const isWarid = app.roles.includes('Warid');
-                    
-                    if(window.state.editingAppId === app.id) {
-                        const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
-                        return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-16 px-1"></div></td><td class="py-2.5 px-3"><input type="text" id="editAppName-${app.id}" value="${app.name}" class="input-glass font-bold w-full min-w-[100px] mb-1"><select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1"><option value="apps" ${app.section === 'apps' ? 'selected' : ''}>Laci Aplikasi</option><option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Laci Edukasi</option></select></td><td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass text-[10px] w-full min-w-[150px]"></td><td class="py-2.5 px-3"><select id="editAppColor-${app.id}" class="input-glass text-[11px] p-1">${colorOptions}</select></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Umum-${app.id}" ${isUmum ? 'checked' : ''} onchange="toggleUmumInline('${app.id}')" class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Pegawai-${app.id}" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Warid-${app.id}" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveAppInline('${app.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditApp()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm border border-white"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
-                    } else {
-                        return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors"
-                            ondragstart="handleDragStart(event, '${app.id}', '${typeKey}')"
-                            ondragover="return handleDragOver(event)"
-                            ondragleave="handleDragLeave(event)"
-                            ondrop="return handleDrop(event, '${app.id}', '${typeKey}')"
-                            ondragend="handleDragEnd(event)">
-                            <td class="py-3 px-3">
-                                <div class="flex items-center gap-2">
-                                    <div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div>
-                                    <div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div>
-                                </div>
-                            </td>
-                            <td class="py-3 px-3"><div class="font-bold text-[13px] text-brand-navy">${app.name}</div><div class="text-[9px] text-brand-muted">${app.cat}</div></td>
-                            <td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[200px]" title="${app.url}"><a href="${app.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${app.url}</a></div></td>
-                            <td class="py-3 px-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${app.bg} ${app.color} border border-white capitalize">${app.color.replace('text-','').replace('-500','')}</span></td>
-                            <td class="py-3 px-3 text-center">${isUmum ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
-                            <td class="py-3 px-3 text-center">${isPegawai ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
-                            <td class="py-3 px-3 text-center">${isWarid ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td>
-                            <td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${app.status ? 'checked' : ''} onchange="toggleAppStatus('${app.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td>
-                            <td class="py-3 px-3 text-right"><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex" onclick="startEditApp('${app.id}')"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td>
-                        </tr>`;
-                    }
-                }).join('');
-            };
-            
-            const trsApps = generateAppRows(filteredApps.filter(a => a.section === 'apps'), 'app');
-            const trsEdukasi = generateAppRows(filteredApps.filter(a => a.section === 'edukasi'), 'edukasi');
+            const rowsApp = filteredApps.map(app => {
+                const isUmum = app.roles.includes('Umum'); const isPegawai = app.roles.includes('Pegawai'); const isWarid = app.roles.includes('Warid');
+                if(window.state.editingAppId === app.id) {
+                    const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+                    return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-16 px-1"></div></td><td class="py-2.5 px-3"><input type="text" id="editAppName-${app.id}" value="${app.name}" class="input-glass font-bold w-full min-w-[100px] mb-1"><select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1"><option value="apps" ${app.section === 'apps' ? 'selected' : ''}>Laci Aplikasi</option><option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Laci Edukasi</option></select></td><td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass min-w-[150px]"></td><td class="py-2.5 px-3"><select id="editAppColor-${app.id}" class="input-glass text-[10px] p-1">${colorOptions}</select></td><td class="py-2.5 px-3"><div class="flex flex-col gap-1 text-[11px]"><label class="flex items-center gap-1.5"><input type="checkbox" id="editAppRole-Umum-${app.id}" ${isUmum ? 'checked' : ''} onchange="toggleUmumInline('${app.id}')"> Umum</label><label class="flex items-center gap-1.5"><input type="checkbox" id="editAppRole-Pegawai-${app.id}" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''}> Pegawai</label><label class="flex items-center gap-1.5"><input type="checkbox" id="editAppRole-Warid-${app.id}" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''}> Warid</label></div></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted">Edit</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveAppInline('${app.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditApp()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
+                } else {
+                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${app.id}', 'app')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${app.id}', 'app')" ondragend="handleDragEnd(event)"><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center border border-white"><i data-lucide="${app.icon}" class="w-3.5 h-3.5 ${app.color}"></i></div></div></td><td class="py-3 px-3"><p class="text-[13px] font-bold text-brand-navy">${app.name}</p><span class="text-[10px] text-brand-muted px-1.5 py-0.5 bg-white/50 rounded">${app.cat}</span></td><td class="py-3 px-3"><a href="${app.url}" target="_blank" class="text-[11px] text-blue-500 hover:underline truncate max-w-[150px] block" title="${app.url}">${app.url}</a></td><td class="py-3 px-3"><span class="text-[11px] font-semibold text-brand-muted capitalize">${app.section}</span></td><td class="py-3 px-3"><div class="flex flex-wrap gap-1">${app.roles.map(r => `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r === 'Umum' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}">${r}</span>`).join('')}</div></td><td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${app.status ? 'checked' : ''} onchange="toggleAppStatus('${app.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-3 text-right"><button onclick="startEditApp('${app.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
+                }
+            }).join('');
 
-            const theadTemplate = `
-                <thead class="bg-white/40 border-b border-white/50">
-                    <tr>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Ikon</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Aplikasi</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Warna</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Umum</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Pegawai</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Warid</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[70px]">Status</th>
-                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th>
-                    </tr>
-                </thead>
-            `;
-            
-            return `
-            <div class="p-4 md:p-6 w-full h-full flex flex-col overflow-y-auto slider-scroll box-border">
-                <div class="glass-panel p-4 rounded-[20px] flex flex-col lg:flex-row lg:items-center justify-between mb-5 gap-3 shrink-0">
-                    <div>
-                        <h1 class="text-[18px] font-extrabold text-brand-navy">Menu & Aplikasi</h1>
-                        <p class="text-[11px] text-brand-muted mt-0.5">Kelola menu portal dan aplikasi. Tahan dan seret ikon 3 garis untuk mengubah urutan.</p>
-                    </div>
-                    <button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-5 py-2.5 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
-                </div>
-                
-                <div class="mb-6 shrink-0">
-                    <h2 class="text-[14px] font-extrabold text-brand-navy mb-2 ml-2 flex items-center gap-2"><i data-lucide="menu" class="w-4 h-4 text-brand-blue"></i> Tabel Menu Utama Portal</h2>
-                    <div class="glass-panel rounded-[20px] overflow-hidden w-full">
-                        <div class="overflow-x-auto w-full">
-                            <table class="w-full text-left border-collapse min-w-[600px]">
-                                <thead class="bg-white/40 border-b border-white/50">
-                                    <tr>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Urutan</th>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Nama Menu</th>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Ikon</th>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Tampil</th>
-                                        <th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rowsMenu}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 mx-2 gap-3 shrink-0 mt-2">
-                    <h2 class="text-[14px] font-extrabold text-brand-navy flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand-blue"></i> Tabel Daftar Aplikasi Utama</h2>
-                    <div class="flex items-center gap-3">
-                        <div class="relative w-full md:w-[200px]">
-                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i>
-                            <input type="text" oninput="triggerAppSearch(this.value)" placeholder="Cari aplikasi..." value="${window.state.searchQueryApp}" class="input-glass pl-8 py-1.5">
-                        </div>
-                        <button onclick="showToast('Fitur Tambah segera hadir')" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button>
-                    </div>
-                </div>
-                
-                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-6 w-full">
-                    <div class="overflow-x-auto slider-scroll w-full">
-                        <table class="w-full text-left border-collapse min-w-[1050px]">
-                            ${theadTemplate}
-                            <tbody>${trsApps}</tbody>
-                        </table>
-                        ${filteredApps.filter(a => a.section === 'apps').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada aplikasi utama ditemukan.</div>' : ''}
-                    </div>
-                </div>
-                
-                <h2 class="text-[14px] font-extrabold text-brand-navy mb-2 mx-2 flex items-center gap-2 shrink-0 mt-2"><i data-lucide="lightbulb" class="w-4 h-4 text-orange-500"></i> Tabel Daftar Karya & Edukasi</h2>
-                
-                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-8 w-full">
-                    <div class="overflow-x-auto slider-scroll w-full">
-                        <table class="w-full text-left border-collapse min-w-[1050px]">
-                            ${theadTemplate}
-                            <tbody>${trsEdukasi}</tbody>
-                        </table>
-                        ${filteredApps.filter(a => a.section === 'edukasi').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada karya/edukasi ditemukan.</div>' : ''}
-                    </div>
-                </div>
-                
-            </div>`;
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><div class="flex justify-between items-center mb-6"><h1 class="text-[20px] font-extrabold text-brand-navy">Kelola Menu & Aplikasi</h1><button onclick="globalSave()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2"><i data-lucide="cloud-upload" class="w-4 h-4"></i> Simpan Perubahan</button></div><div class="glass-panel p-5 rounded-[24px] mb-8"><h3 class="text-[14px] font-bold text-brand-navy mb-3">Struktur Menu Sidebar Utama</h3><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-2.5 px-3">No</th><th class="py-2.5 px-3">Nama Menu</th><th class="py-2.5 px-3">Ikon</th><th class="py-2.5 px-3">URL / Target</th><th class="py-2.5 px-3">Aktif</th><th class="py-2.5 px-3 text-right">Aksi</th></tr></thead><tbody class="text-[12px]">${rowsMenu}</tbody></table></div></div><div class="glass-panel p-5 rounded-[24px]"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Daftar Aplikasi & Games</h3><div class="glass-pill h-[36px] rounded-full flex items-center px-3 border border-white/80 w-full md:w-[240px]"><i data-lucide="search" class="w-4 h-4 text-brand-muted mr-2"></i><input type="text" oninput="triggerAppSearch(this.value)" value="${window.state.searchQueryApp}" placeholder="Cari aplikasi..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div></div><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-2.5 px-3">Aplikasi</th><th class="py-2.5 px-3">Kategori</th><th class="py-2.5 px-3">URL</th><th class="py-2.5 px-3">Laci</th><th class="py-2.5 px-3">Hak Akses</th><th class="py-2.5 px-3">Status</th><th class="py-2.5 px-3 text-right">Aksi</th></tr></thead><tbody class="text-[12px]">${rowsApp}</tbody></table></div></div></div>`;
         }
 
-        window.triggerUserSearch = function(val) { window.state.searchQueryUser = val.toLowerCase(); window.render(); }
-        
         window.renderAdminUsers = function() {
-            const filteredUsers = window.DB.users.filter(u => u.name.toLowerCase().includes(window.state.searchQueryUser) || u.role.toLowerCase().includes(window.state.searchQueryUser));
-            const trs = filteredUsers.map(u => `<tr class="border-b border-white/30 hover:bg-white/30 transition-colors"><td class="py-3 px-4"><div class="flex items-center gap-3"><img src="https://i.pravatar.cc/150?u=${u.id}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm"><div><div class="font-bold text-[13px] text-brand-navy">${u.name}</div><div class="text-[10px] text-brand-muted">${u.email}</div></div></div></td><td class="py-3 px-4 hidden md:table-cell"><span class="text-[11px] font-bold px-2.5 py-1 ${u.role === 'Super Admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600'} rounded-md border border-white/50">${u.role}</span></td><td class="py-3 px-4 hidden lg:table-cell"><div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full ${u.status ? 'bg-green-500' : 'bg-red-500'}"></div><span class="text-[12px] font-bold text-brand-navy">${u.status ? 'Aktif' : 'Nonaktif'}</span></div></td><td class="py-3 px-4 text-right"><div class="flex items-center justify-end gap-2"><button onclick="toggleUserStatus(${u.id})" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-muted border border-white shadow-sm" title="${u.status ? 'Nonaktifkan' : 'Aktifkan'}"><i data-lucide="${u.status ? 'ban' : 'check-circle'}" class="w-3.5 h-3.5 ${u.status ? 'text-red-500' : 'text-green-500'}"></i></button><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm" onclick="showEditUserModal(${u.id})"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></div></td></tr>`).join('');
-            return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border"><div class="glass-panel p-4 rounded-[20px] flex flex-col md:flex-row md:items-center justify-between mb-5 gap-3"><div><h1 class="text-[18px] font-extrabold text-brand-navy">Data Pengguna</h1><p class="text-[11px] text-brand-muted mt-0.5">Kelola akun dan role.</p></div><div class="flex items-center gap-3"><div class="relative w-full max-w-[200px]"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerUserSearch(this.value)" placeholder="Cari pengguna..." value="${window.state.searchQueryUser}" class="input-glass pl-8 py-1.5"></div><button onclick="showAddUserModal()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah</button></div></div><div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full"><div class="overflow-y-auto slider-scroll flex-1 w-full"><table class="w-full text-left border-collapse min-w-[500px]"><thead class="bg-white/40 sticky top-0 backdrop-blur-md z-10"><tr><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase">Pengguna</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden md:table-cell">Role</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden lg:table-cell">Status</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase text-right">Aksi</th></tr></thead><tbody>${trs}</tbody></table>${filteredUsers.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada pengguna ditemukan.</div>' : ''}</div></div></div>`;
+            const userRows = window.DB.users.map(u => `<tr class="border-b border-white/30 hover:bg-white/20"><td class="py-3 px-4 font-bold text-[13px] text-brand-navy flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">${u.name.charAt(0)}</div>${u.name}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${u.email}</td><td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${u.role === 'Super Admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">${u.role}</span></td><td class="py-3 px-4"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${u.status ? 'checked' : ''} ${u.id === window.state.user.id ? 'disabled' : ''} onchange="toggleUserStatus(${u.id})"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-4 text-right"><button onclick="showEditUserModal(${u.id})" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`).join('');
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><div class="flex justify-between items-center mb-6"><h1 class="text-[20px] font-extrabold text-brand-navy">Hak Akses & Pengguna</h1><button onclick="showAddUserModal()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2"><i data-lucide="user-plus" class="w-4 h-4"></i> Tambah User</button></div><div class="glass-panel p-5 rounded-[24px]"><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-2.5 px-4">Nama Pengguna</th><th class="py-2.5 px-4">Email</th><th class="py-2.5 px-4">Peran (Role)</th><th class="py-2.5 px-4">Status</th><th class="py-2.5 px-4 text-right">Aksi</th></tr></thead><tbody class="text-[12px]">${userRows}</tbody></table></div></div></div>`;
+        }
+
+        window.renderAdminGuru = function() {
+            const q = (window.state.searchQueryGuru || '').toLowerCase();
+            const filtered = window.DB.guru.filter(g => g.nama.toLowerCase().includes(q) || (g.nik && g.nik.toLowerCase().includes(q)) || (g.nbm && g.nbm.toLowerCase().includes(q)));
+            const rows = filtered.map((g, idx) => `<tr class="border-b border-white/30 hover:bg-white/20"><td class="py-3 px-4 sticky-col-1 font-bold text-[12px] text-brand-navy">${idx + 1}</td><td class="py-3 px-4 sticky-col-2 font-bold text-[13px] text-brand-navy">${g.nama} ${g.namaGelar ? '<span class="text-[11px] text-brand-muted font-normal">(' + g.namaGelar + ')</span>' : ''}</td><td class="py-3 px-4 sticky-col-3 text-[12px] text-brand-muted">${g.waliKelas || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${g.nik || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${g.nbm || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${g.jk || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${g.noWa || '-'}</td><td class="py-3 px-4 sticky-col-right text-right"><button onclick="showEditGuruModal(${g.id})" class="w-7 h-7 rounded-lg bg-white/80 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`).join('');
+            
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto flex flex-col h-full"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6"><h1 class="text-[20px] font-extrabold text-brand-navy">Data Pegawai & Guru</h1><div class="flex flex-wrap items-center gap-2"><div class="glass-pill h-[38px] rounded-full flex items-center px-3 border border-white/80 w-[220px]"><i data-lucide="search" class="w-4 h-4 text-brand-muted mr-2"></i><input type="text" oninput="window.state.searchQueryGuru=this.value;window.render();" value="${window.state.searchQueryGuru || ''}" placeholder="Cari pegawai..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div><button onclick="downloadFormatGuru()" class="px-3.5 py-2 bg-white/70 hover:bg-white text-brand-navy rounded-xl text-xs font-bold shadow-sm border border-white flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i> Format</button><button onclick="document.getElementById('fileGuru').click()" class="px-3.5 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Upload</button><button onclick="showAddGuruModal()" class="px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah</button><button onclick="globalSave()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Simpan</button></div></div><div class="glass-panel p-0 rounded-[24px] flex-1 overflow-hidden flex flex-col shadow-sm"><div class="overflow-x-auto slider-scroll flex-1"><table class="w-full text-left border-collapse whitespace-nowrap"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-3 px-4 sticky-col-1-header">NO</th><th class="py-3 px-4 sticky-col-2-header">NAMA PEGAWAI</th><th class="py-3 px-4 sticky-col-3-header">WALI KELAS</th><th class="py-3 px-4">NIK</th><th class="py-3 px-4">NBM / NIP</th><th class="py-3 px-4">L/P</th><th class="py-3 px-4">NO. WA</th><th class="py-3 px-4 sticky-col-right-header text-right">AKSI</th></tr></thead><tbody class="text-[12px]">${rows}</tbody></table></div></div></div>`;
+        }
+
+        window.renderAdminTugasPegawai = function() {
+            const q = (window.state.searchQueryTugas || '').toLowerCase();
+            const filtered = window.DB.guru.filter(g => g.nama.toLowerCase().includes(q) || (g.waliKelas && g.waliKelas.toLowerCase().includes(q)) || (g.tugasTambahan && g.tugasTambahan.toLowerCase().includes(q)));
+            const rows = filtered.map((g, idx) => {
+                const renderMapelBadge = (m, c) => m ? `<div class="flex items-center gap-1.5 py-0.5"><span class="font-bold text-brand-navy">${m}</span><span class="px-1.5 py-0.2 bg-white/70 border border-white rounded text-[10px] text-blue-600 font-semibold">${c || '-'}</span></div>` : '<span class="text-brand-muted/40">-</span>';
+                return `<tr class="border-b border-white/30 hover:bg-white/20"><td class="py-3 px-4 sticky-col-1 font-bold text-[12px] text-brand-navy">${idx + 1}</td><td class="py-3 px-4 sticky-col-2 font-bold text-[13px] text-brand-navy">${g.nama}</td><td class="py-3 px-4 sticky-col-3 text-[12px]"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-600 font-bold">${g.waliKelas || '-'}</span></td><td class="py-3 px-4 text-[12px]"><span class="px-2 py-0.5 rounded bg-purple-100 text-purple-600 font-bold">${g.tugasTambahan || '-'}</span></td><td class="py-3 px-4 text-[12px]"><span class="px-2 py-0.5 rounded bg-orange-100 text-orange-600 font-bold">${g.pelatihEkstra || '-'}</span></td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel1, g.kelasMapel1)}</td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel2, g.kelasMapel2)}</td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel3, g.kelasMapel3)}</td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel4, g.kelasMapel4)}</td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel5, g.kelasMapel5)}</td><td class="py-3 px-4 bg-[#fffcf5]/50">${renderMapelBadge(g.mapel6, g.kelasMapel6)}</td><td class="py-3 px-4 sticky-col-right text-right"><button onclick="showEditTugasModal(${g.id})" class="w-7 h-7 rounded-lg bg-white/80 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
+            }).join('');
+
+            return `<div class="p-5 md:p-8 max-w-[1400px] mx-auto overflow-y-auto flex flex-col h-full"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6"><h1 class="text-[20px] font-extrabold text-brand-navy">Tugas & Jadwal Mengajar Pegawai</h1><div class="flex flex-wrap items-center gap-2"><div class="glass-pill h-[38px] rounded-full flex items-center px-3 border border-white/80 w-[220px]"><i data-lucide="search" class="w-4 h-4 text-brand-muted mr-2"></i><input type="text" oninput="window.state.searchQueryTugas=this.value;window.render();" value="${window.state.searchQueryTugas || ''}" placeholder="Cari tugas/guru..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div><button onclick="downloadFormatTugas()" class="px-3.5 py-2 bg-white/70 hover:bg-white text-brand-navy rounded-xl text-xs font-bold shadow-sm border border-white flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i> Format</button><button onclick="document.getElementById('fileTugas').click()" class="px-3.5 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Upload</button><button onclick="showAddTugasModal()" class="px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button><button onclick="globalSave()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Simpan</button></div></div><div class="glass-panel p-0 rounded-[24px] flex-1 overflow-hidden flex flex-col shadow-sm"><div class="overflow-x-auto slider-scroll flex-1"><table class="w-full text-left border-collapse whitespace-nowrap"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-3 px-4 sticky-col-1-header">NO</th><th class="py-3 px-4 sticky-col-2-header">NAMA PEGAWAI</th><th class="py-3 px-4 sticky-col-3-header">WALI KELAS</th><th class="py-3 px-4">TUGAS TAMBAHAN</th><th class="py-3 px-4">PELATIH EKSTRA</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 1 & KELAS</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 2 & KELAS</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 3 & KELAS</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 4 & KELAS</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 5 & KELAS</th><th class="py-3 px-4 bg-[#fff8e6]">MAPEL 6 & KELAS</th><th class="py-3 px-4 sticky-col-right-header text-right">AKSI</th></tr></thead><tbody class="text-[12px]">${rows}</tbody></table></div></div></div>`;
+        }
+
+        window.renderAdminSiswa = function() {
+            const q = (window.state.searchQuerySiswa || '').toLowerCase();
+            const filtered = window.DB.siswa.filter(s => s.nama_siswa.toLowerCase().includes(q) || (s.nis && s.nis.toLowerCase().includes(q)) || (s.kelas && s.kelas.toLowerCase().includes(q)));
+            const rows = filtered.map((s, idx) => `<tr class="border-b border-white/30 hover:bg-white/20"><td class="py-3 px-4 sticky-col-1 font-bold text-[12px] text-brand-navy">${idx + 1}</td><td class="py-3 px-4 sticky-col-2 font-bold text-[12px] text-brand-navy">${s.no_presensi || '-'}</td><td class="py-3 px-4 sticky-col-3 font-bold text-[13px] text-brand-navy"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-600"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i></div><div><p class="font-bold text-brand-navy">${s.nama_siswa}</p><p class="text-[10px] text-brand-muted">NISN: ${s.nisn || '-'} • NIK: ${s.nik_anak || '-'}</p></div></div></td><td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-600 font-bold">${s.kelas || '-'}</span></td><td class="py-3 px-4 text-[12px] text-brand-muted">${s.nis || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${s.l_p || '-'}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${s.tempat_lahir || '-'}, ${formatDateId(s.tgl_lahir)}</td><td class="py-3 px-4 text-[12px] text-brand-muted">${s.nama_ayah || '-'}</td><td class="py-3 px-4 sticky-col-right text-right"><button onclick="showEditSiswaModal(${s.id})" class="w-7 h-7 rounded-lg bg-white/80 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`).join('');
+            
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto flex flex-col h-full"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6"><h1 class="text-[20px] font-extrabold text-brand-navy">Data Siswa & Wali</h1><div class="flex flex-wrap items-center gap-2"><div class="glass-pill h-[38px] rounded-full flex items-center px-3 border border-white/80 w-[220px]"><i data-lucide="search" class="w-4 h-4 text-brand-muted mr-2"></i><input type="text" oninput="window.state.searchQuerySiswa=this.value;window.render();" value="${window.state.searchQuerySiswa || ''}" placeholder="Cari siswa..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div><button onclick="downloadFormatSiswa()" class="px-3.5 py-2 bg-white/70 hover:bg-white text-brand-navy rounded-xl text-xs font-bold shadow-sm border border-white flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i> Format</button><button onclick="document.getElementById('fileSiswa').click()" class="px-3.5 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Upload</button><button onclick="showAddSiswaModal()" class="px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah</button><button onclick="globalSave()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"><i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Simpan</button></div></div><div class="glass-panel p-0 rounded-[24px] flex-1 overflow-hidden flex flex-col shadow-sm"><div class="overflow-x-auto slider-scroll flex-1"><table class="w-full text-left border-collapse whitespace-nowrap"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-3 px-4 sticky-col-1-header">NO</th><th class="py-3 px-4 sticky-col-2-header">PRES</th><th class="py-3 px-4 sticky-col-3-header">NAMA SISWA</th><th class="py-3 px-4">KELAS</th><th class="py-3 px-4">NIS</th><th class="py-3 px-4">L/P</th><th class="py-3 px-4">TEMPAT, TANGGAL LAHIR</th><th class="py-3 px-4">NAMA AYAH</th><th class="py-3 px-4 sticky-col-right-header text-right">AKSI</th></tr></thead><tbody class="text-[12px]">${rows}</tbody></table></div></div></div>`;
         }
 
         window.renderAdminLogs = function() {
-            const rows = window.DB.logs.map(l => `<div class="flex items-start gap-3.5 p-3.5 border-b border-white/30 hover:bg-white/30 transition-colors"><div class="w-9 h-9 rounded-full bg-${l.color}-100 flex items-center justify-center border border-white shrink-0"><i data-lucide="activity" class="w-4 h-4 text-${l.color}-500"></i></div><div class="flex-1 min-w-0"><h4 class="text-[12px] font-bold text-brand-navy leading-tight">${l.action} <span class="text-brand-blue">${l.target}</span></h4><div class="flex items-center gap-2.5 mt-1"><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${l.user}</span><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${l.time}</span><span class="text-[9px] font-bold px-1.5 py-0.5 bg-white/60 border border-white rounded text-brand-muted ml-auto">${l.type}</span></div></div></div>`).join('');
-            return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border"><div class="glass-panel p-4 rounded-[20px] mb-5 shrink-0"><h1 class="text-[18px] font-extrabold text-brand-navy">Log Aktivitas</h1><p class="text-[11px] text-brand-muted mt-0.5">Riwayat tindakan penting di sistem.</p></div><div class="glass-panel rounded-[20px] flex-1 overflow-y-auto slider-scroll p-1 w-full">${rows}</div></div>`;
+            const rows = window.DB.logs.map(l => `<tr class="border-b border-white/30"><td class="py-3 px-4 font-bold text-[12px] text-brand-muted">${l.time}</td><td class="py-3 px-4 font-bold text-[12px] text-brand-navy">${l.user}</td><td class="py-3 px-4 text-[12px] text-brand-navy">${l.action} <strong class="text-blue-500">${l.target}</strong></td><td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-${l.color}-100 text-${l.color}-600 text-[10px] font-bold">${l.type}</span></td></tr>`).join('');
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto"><h1 class="text-[20px] font-extrabold text-brand-navy mb-6">Log Aktivitas Sistem</h1><div class="glass-panel p-5 rounded-[24px]"><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="border-b border-white/40 text-[11px] font-extrabold text-brand-muted"><th class="py-3 px-4">Waktu</th><th class="py-3 px-4">Pengguna</th><th class="py-3 px-4">Aksi</th><th class="py-3 px-4">Modul</th></tr></thead><tbody class="text-[12px]">${rows}</tbody></table></div></div></div>`;
         }
 
-        // ==========================================
-        // SMART RENDER ENGINE (Anti-Flicker)
-        // ==========================================
+        window.renderAdminLayout = function(isMobile) {
+            let content = '';
+            if (window.state.path === '#admin-dashboard') content = window.renderAdminDashboard();
+            else if (window.state.path === '#admin-menu-apps') content = window.renderAdminMenuApps();
+            else if (window.state.path === '#admin-users') content = window.renderAdminUsers();
+            else if (window.state.path === '#admin-guru') content = window.renderAdminGuru();
+            else if (window.state.path === '#admin-tugas-pegawai') content = window.renderAdminTugasPegawai();
+            else if (window.state.path === '#admin-siswa') content = window.renderAdminSiswa();
+            else if (window.state.path === '#admin-logs') content = window.renderAdminLogs();
+            else content = window.renderAdminDashboard();
+
+            let mobileNav = window.getAdminMobileNavLinks();
+            let sidebarLinks = window.getAdminSidebarLinks();
+
+            return `<div class="flex h-[100dvh] w-full overflow-hidden relative">
+                ${!isMobile ? `<aside class="w-[220px] shrink-0 bg-white/30 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-5 cursor-pointer border-b border-white/30" onclick="navigate('#home')"><div class="scale-90 origin-left">${logoSvg}</div><span class="text-[14px] font-extrabold text-brand-navy tracking-tight">Panel Admin</span></div><nav class="flex flex-col gap-1.5 w-full p-3 overflow-y-auto slider-scroll flex-1">${sidebarLinks}</nav><div class="p-3 border-t border-white/30"><button onclick="navigate('#home')" class="w-full py-2.5 bg-white/70 hover:bg-white text-brand-navy font-bold text-[12px] rounded-xl shadow-sm flex items-center justify-center gap-2 border border-white"><i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Portal</button></div></aside>` : ''}
+                <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile ? 'pb-[70px]' : ''}">
+                    ${isMobile ? `<header class="h-[56px] flex items-center justify-between px-4 shrink-0 z-30 bg-white/40 backdrop-blur-xl border-b border-white/50 w-full"><button onclick="navigate('#home')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px]"><i data-lucide="arrow-left" class="w-4 h-4"></i> Portal</button><span class="font-bold text-[13px] text-brand-navy">Panel Admin</span><div class="w-6"></div></header>` : ''}
+                    <main class="flex-1 w-full relative h-full overflow-hidden flex flex-col bg-white/10">${content}</main>
+                </div>
+                ${isMobile ? `<nav class="bottom-nav">${mobileNav}</nav>` : ''}
+            </div>`;
+        }
+
         window.render = function() {
             const root = document.getElementById('app-root');
+            if(!root) return;
             const isMobile = window.innerWidth < 768;
-            const isAdminView = window.state.path.startsWith('#admin');
-
-            if (isAdminView && !['Super Admin', 'Admin'].includes(window.state.user.role)) { 
-                window.navigate('#home'); 
-                return; 
-            }
-
-            if (isAdminView) {
-                let adminContent = '';
-                switch(window.state.path) {
-                    case '#admin-dashboard': adminContent = window.renderAdminDashboard(); break;
-                    case '#admin-menu-apps': adminContent = window.renderAdminMenuApps(); break;
-                    case '#admin-users': adminContent = window.renderAdminUsers(); break;
-                    case '#admin-logs': adminContent = window.renderAdminLogs(); break;
-                    default: adminContent = window.renderAdminDashboard();
-                }
-
-                const existingShell = document.getElementById('admin-shell-layout');
-                if (existingShell && existingShell.dataset.mobile === String(isMobile)) {
-                    // Update inner content tanpa me-render ulang seluruh halaman (bebas kedip)
-                    document.getElementById('admin-main-content').innerHTML = adminContent;
-                    if (!isMobile) {
-                        const sidebarLinks = document.getElementById('admin-sidebar-links');
-                        if (sidebarLinks) sidebarLinks.innerHTML = window.getAdminSidebarLinks();
-                    } else {
-                        const mobileLinks = document.getElementById('admin-mobile-links');
-                        if (mobileLinks) mobileLinks.innerHTML = window.getAdminMobileNavLinks();
-                    }
-                } else {
-                    // Buat shell dasar pertama kali (TANPA animasi fade yang bikin layar kedip putih)
-                    root.innerHTML = `
-                    <div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">
-                        ${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-[10px] flex items-center justify-center text-white shadow-sm"><i data-lucide="layout-dashboard" class="w-4 h-4"></i></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}
-                        <div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}">
-                            <header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full">
-                                <div class="font-bold text-brand-navy text-[14px] md:hidden">Admin Panel</div>
-                                <div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="https://i.pravatar.cc/150?img=32" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div>
-                            </header>
-                            <main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main>
-                        </div>
-                        ${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}
-                    </div>`;
-                }
+            let html = '';
+            if (window.state.path.startsWith('#admin-')) {
+                html = window.renderAdminLayout(isMobile);
             } else {
-                root.innerHTML = window.renderPortalLayout(isMobile);
+                html = window.renderPortalLayout(isMobile);
             }
-            
-            setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
-            window.renderNotifItems();
+            root.innerHTML = html;
+            if (window.lucide) lucide.createIcons();
         }
-        
-        window.addEventListener('resize', () => {
-            const isMobile = window.innerWidth < 768;
-            const existingShell = document.getElementById('admin-shell-layout');
-            if (existingShell && existingShell.dataset.mobile !== String(isMobile)) {
-                window.render();
-            }
+
+        window.addEventListener('resize', () => window.render());
+        window.addEventListener('DOMContentLoaded', () => {
+            initCloud();
         });
-        
-        // Memulai aplikasi dengan mengambil data dari Supabase
-        initCloud();
     </script>
 </body>
 </html>
