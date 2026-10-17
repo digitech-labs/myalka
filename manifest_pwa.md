@@ -1,0 +1,20 @@
+{
+  "name": "My Alka - Portal Integrasi & Admin",
+  "short_name": "My Alka",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2878F0",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/2878F0/ffffff?text=Alka",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://placehold.co/512x512/2878F0/ffffff?text=Alka",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
