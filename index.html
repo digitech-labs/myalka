@@ -107,7 +107,28 @@
 
         .sticky-top-th { position: sticky; top: 0; z-index: 35; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0; }
 
-        /* SMART PWA INSTALLER ANIMATIONS */
+        /* SPLASH SCREEN & PREMIUM ANIMATIONS */
+        @keyframes splashPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 20px rgba(40,120,240,0.4)); }
+            50% { transform: scale(1.08) rotate(2deg); filter: drop-shadow(0 0 40px rgba(59,130,246,0.7)); }
+        }
+        @keyframes floatCharacter1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-25px, -30px) scale(1.05); }
+        }
+        @keyframes floatCharacter2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, 25px) scale(1.08); }
+        }
+        @keyframes floatCharacter3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        .splash-logo-animate { animation: splashPulse 3s ease-in-out infinite; }
+        .char-float-1 { animation: floatCharacter1 4.5s ease-in-out infinite; }
+        .char-float-2 { animation: floatCharacter2 5.2s ease-in-out infinite; }
+        .char-float-3 { animation: floatCharacter3 3.8s ease-in-out infinite; }
+
         @keyframes cuteFloat {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-5px) rotate(2deg); }
@@ -138,6 +159,37 @@
     </style>
 </head>
 <body class="antialiased selection:bg-brand-blue selection:text-white">
+
+    <div id="splash-screen" class="fixed inset-0 z-[99999] bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700 select-none">
+        <div class="absolute inset-0 opacity-20 pointer-events-none overflow-hidden">
+            <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-500 rounded-full blur-[100px] char-float-1"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-500 rounded-full blur-[120px] char-float-2"></div>
+            <div class="absolute top-1/2 right-1/3 w-60 h-60 bg-emerald-500 rounded-full blur-[90px] char-float-3"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center text-center p-6">
+            <div class="relative mb-6">
+                <div class="absolute -inset-4 bg-gradient-to-r from-blue-500 via-cyan-400 to-orange-500 rounded-full blur-xl opacity-60 animate-pulse"></div>
+                <div class="w-32 h-32 rounded-[32px] bg-white/10 backdrop-blur-2xl border-2 border-white/30 shadow-2xl flex items-center justify-center p-4 relative splash-logo-animate">
+                    <img src="./MyAlka.png" alt="My Alka" class="w-full h-full object-contain drop-shadow-lg" onerror="this.src='https://placehold.co/128x128/2878F0/ffffff?text=Alka'">
+                </div>
+                <div class="absolute -top-3 -right-3 px-3 py-1 bg-blue-500 text-white font-extrabold text-[10px] rounded-full shadow-lg border border-white/50 char-float-1">✨ V2.0</div>
+                <div class="absolute -bottom-2 -left-3 px-2.5 py-0.5 bg-orange-500 text-white font-extrabold text-[9px] rounded-full shadow-lg border border-white/50 char-float-2">🚀 Pro</div>
+            </div>
+
+            <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2 drop-shadow-md">
+                My <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Alka</span>
+            </h1>
+            <p class="text-xs sm:text-sm font-medium text-slate-300 max-w-[280px] leading-relaxed mb-8">
+                Portal Integrasi Akademik & Administrasi SDIT Al Kautsar
+            </p>
+
+            <div class="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden relative shadow-inner">
+                <div id="splash-progress" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-orange-500 w-0 transition-all duration-300 rounded-full"></div>
+            </div>
+            <span id="splash-status-text" class="text-[11px] font-bold text-slate-400 mt-3 tracking-wide">Memuat Sistem...</span>
+        </div>
+    </div>
 
     <div id="app-root"></div>
     <div id="pwa-banner-root"></div>
@@ -272,7 +324,7 @@
         };
 
         // ============================================================================
-        // SMART INDONESIAN DATE PARSER (HANDLES EXCEL SERIAL NUMBERS & TEXT DATES)
+        // SMART INDONESIAN DATE PARSER
         // ============================================================================
         window.formatDateId = function(dateVal) {
             if (dateVal === null || dateVal === undefined || dateVal === '' || dateVal === '-') return '-';
@@ -281,10 +333,8 @@
 
             const monthsFull = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-            // Jika angka 4 digit tahun saja (contoh: 1980)
             if (/^\d{4}$/.test(str)) return str;
 
-            // Jika angka serial tanggal Excel (contoh: 43792 atau 35111)
             if (/^\d{5}(\.\d+)?$/.test(str)) {
                 const serial = Math.floor( parseFloat(str) );
                 if (serial > 10000 && serial < 80000) {
@@ -299,10 +349,8 @@
                 }
             }
 
-            // Jika sudah mengandung nama bulan Indonesia, kembalikan langsung
             if (/[a-zA-Z]{3,}/.test(str)) return str;
 
-            // Jika format DD-MM-YYYY, YYYY-MM-DD, atau DD/MM/YYYY
             let parts = str.split(/[-/]/);
             if (parts.length === 3) {
                 let day, month, year;
@@ -453,8 +501,8 @@
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
 
-                    <div class="w-16 h-16 rounded-[20px] bg-gradient-to-br from-blue-50 via-white to-orange-50 border-2 border-white shadow-md flex items-center justify-center mx-auto mb-3 cute-mascot-float relative">
-                        <div class="scale-110">${logoLargeSvg}</div>
+                    <div class="w-16 h-16 rounded-[20px] bg-gradient-to-br from-blue-50 via-white to-orange-50 border-2 border-white shadow-md flex items-center justify-center mx-auto mb-3 cute-mascot-float relative overflow-hidden">
+                        <img src="./MyAlka.png" class="w-full h-full object-cover">
                         <span class="absolute -top-1.5 -right-1.5 text-sm">✨</span>
                     </div>
 
@@ -507,8 +555,8 @@
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
                     <div class="flex items-center gap-3 pr-5">
-                        <div onclick="triggerSmartInstall(event)" class="w-12 h-12 rounded-[16px] bg-gradient-to-br from-blue-50 via-white to-orange-50 border border-blue-100 shadow-sm flex items-center justify-center shrink-0 cute-mascot-float cursor-pointer relative">
-                            <div class="scale-105">${logoSvg}</div>
+                        <div onclick="triggerSmartInstall(event)" class="w-12 h-12 rounded-[16px] bg-gradient-to-br from-blue-50 via-white to-orange-50 border border-blue-100 shadow-sm flex items-center justify-center shrink-0 cute-mascot-float cursor-pointer relative overflow-hidden">
+                            <img src="./MyAlka.png" class="w-full h-full object-cover">
                             <span class="absolute -bottom-1 -right-1 bg-blue-500 text-white text-[8px] font-extrabold px-1.5 py-0.2 rounded-full border border-white shadow">~100KB</span>
                         </div>
                         <div class="flex-1 min-w-0">
@@ -693,7 +741,7 @@
         };
 
         // ============================================================================
-        // PREMIUM STYLED EXCEL GENERATOR (AUTO-FIT, COLORED HEADERS, ZEBRA STRIPES)
+        // PREMIUM STYLED EXCEL GENERATOR
         // ============================================================================
         window.exportPremiumExcel = function({ sheetName, fileName, headers, rows, getHeaderColor, centerCols = [], boldCols = [] }) {
             const aoa = [headers, ...rows];
@@ -925,7 +973,7 @@
         };
 
         // ============================================================================
-        // DUAL-BRIDGE SSO AUTO-LOGIN ENGINE FOR IFRAME APPS (ALKANEWS, ETC)
+        // DUAL-BRIDGE SSO AUTO-LOGIN ENGINE FOR IFRAME APPS
         // ============================================================================
         window.getAlkaSsoPayload = function() {
             const isLoggedIn = Boolean(window.state.isLoggedIn);
@@ -1008,7 +1056,6 @@
             let role = 'Umum';
             let displayName = '';
 
-            // 1. Cari di tabel Users (Admin / Super Admin / Pengelola)
             const foundUser = window.DB.users.find(u =>
                 (u.name && u.name.toLowerCase() === q) ||
                 (u.email && u.email.toLowerCase() === q)
@@ -1020,7 +1067,6 @@
                 displayName = foundUser.name;
             }
 
-            // 2. Cari di tabel Guru / Pegawai (berdasarkan Nama, NIK, atau NBM)
             if (!matchedRecord) {
                 const foundGuru = window.DB.guru.find(g =>
                     (g.nama && g.nama.toLowerCase() === q) ||
@@ -1035,7 +1081,6 @@
                 }
             }
 
-            // 3. Cari di tabel Siswa (berdasarkan Nama Siswa, NISN, NIS, atau NIK Anak)
             if (!matchedRecord) {
                 const foundSiswa = window.DB.siswa.find(s =>
                     (s.nama_siswa && s.nama_siswa.toLowerCase() === q) ||
@@ -1199,8 +1244,8 @@
             }
         };
 
-        const logoSvg = `<svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M50 85C25 85 15 65 15 45C15 25 35 15 50 15C50 15 45 40 50 50C55 60 70 65 85 65C85 75 75 85 50 85Z" fill="url(#paint0_linear)"/><path d="M50 15C75 15 85 35 85 55C85 75 65 85 50 85C50 85 55 60 50 50C45 40 30 35 15 35C15 25 25 15 50 15Z" fill="url(#paint1_linear)"/><defs><linearGradient id="paint0_linear" x1="15" y1="50" x2="60" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient><linearGradient id="paint1_linear" x1="85" y1="50" x2="40" y2="15" gradientUnits="userSpaceOnUse"><stop stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs></svg>`;
-        const logoLargeSvg = logoSvg.replace('width="24" height="24"', 'width="48" height="48"');
+        const logoSvg = `<img src="./MyAlka.png" class="w-full h-full object-cover rounded-xl" onerror="this.src='https://placehold.co/100x100/2878F0/ffffff?text=Alka'">`;
+        const logoLargeSvg = `<img src="./MyAlka.png" class="w-full h-full object-cover rounded-2xl shadow" onerror="this.src='https://placehold.co/200x200/2878F0/ffffff?text=MyAlka'">`;
 
         window.getZoomControls = function(isMobile) {
             return `<div class="glass-pill h-[36px] rounded-full flex items-center shrink-0 px-1 border border-white/80 shadow-sm ${isMobile ? 'ml-auto' : 'mr-4'}"><button onclick="changeZoom(-0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">-</button><span class="zoom-val text-[12px] font-bold text-brand-navy w-[44px] text-center border-x border-white/30">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">+</button></div>`;
@@ -1242,7 +1287,7 @@
             return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[220px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50">
                 <div class="px-3 py-3 flex items-center gap-3 border-b border-white/40 mb-1 bg-white/30 rounded-t-[16px]">
                     <div class="w-10 h-10 rounded-full border-2 border-white bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
-                        ${window.state.isLoggedIn ? `<img src="${userAvatar}" class="w-full h-full object-cover">` : '<div class="scale-75 origin-center">' + logoSvg + '</div>'}
+                        ${window.state.isLoggedIn ? `<img src="${userAvatar}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-[13px] font-bold text-brand-navy truncate">${userName}</p>
@@ -1260,7 +1305,7 @@
             if (path === '#login') return `
                 <div class="w-full h-full flex items-center justify-center p-5 relative animate-fade">
                     <form onsubmit="doLogin(event)" class="glass-panel w-full max-w-[380px] p-8 rounded-[32px] flex flex-col items-center text-center relative z-10">
-                        <div class="mb-5 scale-110">${logoLargeSvg}</div>
+                        <div class="mb-5 w-20 h-20 rounded-2xl overflow-hidden shadow-md mx-auto">${logoLargeSvg}</div>
                         <h2 class="text-[22px] font-extrabold text-brand-navy mb-1 tracking-tight">Assalamualaikum</h2>
                         <p class="text-[12px] text-brand-muted mb-6 font-medium">Masuk menggunakan <strong>Nama Lengkap</strong> (atau NIK/NISN) dan Password Anda.</p>
                         <div class="w-full flex flex-col gap-3 mb-4 text-left">
@@ -1309,7 +1354,7 @@
             const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn ? a.roles.includes('Umum') : (a.roles.includes('Umum') || a.roles.includes(window.state.user.role))) && a.section === currentFilter);
             let appGridHTML = visibleApps.map(app => `<div onclick="navigate('#app-${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none mb-1 truncate">${app.name}</h4><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`).join('');
 
-            return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button onclick="navigate('#apps')" class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
+            return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3 w-16 h-16 rounded-2xl overflow-hidden shadow">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button onclick="navigate('#apps')" class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
         };
 
         window.renderPortalLayout = function(isMobile) {
@@ -1325,7 +1370,7 @@
             
             const isAppView = window.state.path === '#apps' || window.state.path === '#edukasi' || isDirectApp;
             const profileName = window.state.isLoggedIn ? window.state.user.name : 'Assalamualaikum';
-            const profileSub = window.state.isLoggedIn ? window.state.user.role : 'Klik untuk Login';
+            const profileSub = window.state.isLoggedIn ? window.state.user.role : 'SDIT Al Kautsar';
             const visibleMenus = window.DB.menus.filter(m => m.visible).sort((a,b) => a.order - b.order);
             const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn ? a.roles.includes('Umum') : (a.roles.includes('Umum') || a.roles.includes(window.state.user.role))) && a.section === currentSection);
 
@@ -1350,13 +1395,13 @@
 
             return `
             <div class="flex h-[100dvh] w-full overflow-hidden relative">
-                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="scale-90 origin-left">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav></aside>` : ''}
+                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav></aside>` : ''}
                 
                 <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile && !isDirectApp && window.state.path !== '#login' ? 'pb-[70px]' : ''}">
                     ${isMobile ? `
                     <header class="h-[56px] flex items-center justify-between px-4 shrink-0 z-30 sticky top-0 ${isDirectApp ? 'bg-white/40 backdrop-blur-xl border-b border-white/50' : 'bg-transparent pt-2'} w-full">
                         ${isDirectApp ? `<button onclick="navigate('#${currentSection}')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px] glass-pill px-3 py-1.5 rounded-full shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i> Aplikasi</button><span class="ml-3 font-bold text-[13px] text-brand-navy truncate">${currentTitle}</span>${window.getZoomControls(true)}` 
-                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="scale-75 origin-center">' + logoSvg + '</div>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">${window.state.isLoggedIn ? 'Halo,' : 'SDIT Al Kautsar'}</span><span class="text-[13px] font-extrabold text-brand-navy leading-none truncate">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div><button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
+                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">${window.state.isLoggedIn ? 'Halo,' : 'SDIT Al Kautsar'}</span><span class="text-[13px] font-extrabold text-brand-navy leading-none truncate">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div><button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
                     </header>` : `
                     <header class="h-[60px] flex items-center px-6 shrink-0 z-30 bg-transparent w-full relative">
                         ${isIframe ? window.getZoomControls(false) : ''}
@@ -1366,7 +1411,7 @@
                         </div>
                         <div class="flex items-center gap-3 ml-auto relative">
                             <div class="relative"><button onclick="togglePopup('notif-popup-desktop', event)" class="w-[36px] h-[36px] rounded-full glass-pill flex justify-center items-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="absolute top-[8px] right-[9px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-desktop')}</div>
-                            <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[38px] pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="scale-75 origin-center">' + logoSvg + '</div>'}</div><div class="flex flex-col text-left"><span class="text-[10px] font-extrabold text-brand-navy truncate max-w-[110px]">${profileName}</span><span class="text-[8.5px] font-semibold text-brand-muted truncate max-w-[110px]">${profileSub}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
+                            <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[38px] pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[10px] font-extrabold text-brand-navy truncate max-w-[110px]">${profileName}</span><span class="text-[8.5px] font-semibold text-brand-muted truncate max-w-[110px]">${profileSub}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
                         </div>
                     </header>`}
                     
@@ -1455,7 +1500,7 @@
         };
 
         // ============================================================================
-        // DATA PEGAWAI & GURU (DENGAN KOLOM PASSWORD)
+        // DATA PEGAWAI & GURU
         // ============================================================================
         const GURU_BIODATA_KEYS = ['nama', 'namaGelar', 'password', 'nik', 'nbm', 'jk', 'tempatLahir', 'tanggalLahir', 'provinsi', 'kabupaten', 'kecamatan', 'desa', 'alamatDetail', 'noWa', 'jenisKepegawaian', 'statusKepegawaian', 'pendidikanTerakhir', 'ptTerakhir', 'ptProvinsi', 'ptKabupaten', 'ptKecamatan', 'ptDesa', 'ptAlamatDetail', 'prodi', 'tahunMasuk', 'tahunLulus', 'ayahNama', 'ayahTahun', 'ayahNik', 'ayahPendidikan', 'ibuNama', 'ibuTahun', 'ibuNik', 'ibuPendidikan', 'linkKk', 'linkIjazah'];
 
@@ -1917,7 +1962,7 @@
         };
 
         // ============================================================================
-        // DATA SISWA & WALI (DENGAN KOLOM PASSWORD)
+        // DATA SISWA & WALI
         // ============================================================================
         const SISWA_KEYS = ['no', 'no_presensi', 'nama_siswa', 'password', 'kelas', 'ekstrakurikuler', 'nis', 'nisn', 'nik_anak', 'l_p', 'agama', 'anak_ke', 'tempat_lahir', 'tgl_lahir', 'no_kk', 'tgl_kk', 'alamat_provinsi', 'alamat_kabupaten', 'alamat_kecamatan', 'alamat_desa', 'alamat_jalan', 'alamat_rt', 'alamat_rw', 'sekolah_nama', 'sekolah_npsn', 'sekolah_provinsi', 'sekolah_kabupaten', 'sekolah_kecamatan', 'nama_ayah', 'ayah_nik', 'ayah_tahun_lahir', 'ayah_pendidikan', 'ayah_pekerjaan', 'ayah_penghasilan', 'nama_ibu', 'ibu_nik', 'ibu_tahun_lahir', 'ibu_pendidikan', 'ibu_pekerjaan', 'ibu_penghasilan', 'alamat_ortu', 'nama_wali', 'kerja_wali', 'alamat_wali', 'no_wa', 'link_kk', 'link_ijazah'];
         const SISWA_HEADERS = ['NO', 'NO PRESENSI', 'NAMA SISWA', 'PASSWORD', 'KELAS', 'EKSTRAKURIKULER', 'NIS', 'NISN', 'NIK ANAK', 'L / P', 'AGAMA', 'ANAK KE', 'TEMPAT LAHIR', 'TANGGAL LAHIR', 'NO KK', 'TANGGAL KK', 'ALAMAT PROVINSI', 'ALAMAT KABUPATEN', 'ALAMAT KECAMATAN', 'ALAMAT DESA', 'ALAMAT JALAN', 'ALAMAT RT', 'ALAMAT RW', 'SEKOLAH NAMA', 'SEKOLAH NPSN', 'SEKOLAH PROVINSI', 'SEKOLAH KABUPATEN', 'SEKOLAH KECAMATAN', 'NAMA AYAH', 'AYAH NIK', 'AYAH TAHUN LAHIR', 'AYAH PENDIDIKAN', 'AYAH PEKERJAAN', 'AYAH PENGHASILAN', 'NAMA IBU', 'IBU NIK', 'IBU TAHUN LAHIR', 'IBU PENDIDIKAN', 'IBU PEKERJAAN', 'IBU PENGHASILAN', 'ALAMAT ORTU', 'NAMA WALI', 'KERJA WALI', 'ALAMAT WALI', 'NO WHATSAPP', 'LINK KK', 'LINK IJAZAH'];
@@ -2191,7 +2236,7 @@
                     }
                 } else {
                     const uAvatar = window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name);
-                    root.innerHTML = `<div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-[10px] flex items-center justify-center text-white shadow-sm"><i data-lucide="layout-dashboard" class="w-4 h-4"></i></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}<div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}"><header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full"><div class="font-bold text-brand-navy text-[14px] md:hidden">Admin Panel</div><div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="${uAvatar}" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div></header><main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main></div>${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}</div>`;
+                    root.innerHTML = `<div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 rounded-[10px] flex items-center justify-center text-white shadow-sm overflow-hidden"><img src="./MyAlka.png" class="w-full h-full object-cover"></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}<div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}"><header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full"><div class="font-bold text-brand-navy text-[14px] md:hidden">Admin Panel</div><div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="${uAvatar}" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div></header><main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main></div>${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}</div>`;
                 }
             } else {
                 root.innerHTML = window.renderPortalLayout(isMobile);
@@ -2208,8 +2253,27 @@
             window.renderPwaFloatingBanner();
         });
         
-        window.initSmartPWA();
-        initCloud();
+        window.addEventListener('DOMContentLoaded', () => {
+            const prog = document.getElementById('splash-progress');
+            const statusText = document.getElementById('splash-status-text');
+            const splash = document.getElementById('splash-screen');
+
+            if (prog && splash) {
+                setTimeout(() => { prog.style.width = '40%'; if(statusText) statusText.textContent = 'Menghubungkan ke Supabase...'; }, 200);
+                setTimeout(() => { prog.style.width = '80%'; if(statusText) statusText.textContent = 'Menyiapkan Data Portal...'; }, 700);
+                setTimeout(() => { 
+                    prog.style.width = '100%'; 
+                    if(statusText) statusText.textContent = 'Siap Digunakan! 🚀'; 
+                    setTimeout(() => {
+                        splash.style.opacity = '0';
+                        setTimeout(() => splash.remove(), 700);
+                    }, 400);
+                }, 1200);
+            }
+
+            window.initSmartPWA();
+            initCloud();
+        });
     </script>
 </body>
 </html>
