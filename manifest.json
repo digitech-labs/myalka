@@ -4,7 +4,7 @@
 "start_url": "./",
 "display": "standalone",
 "background_color": "#0f172a",
-"theme_color": "#2878F0",
+"theme_color": "#2563EB",
 "icons": [
 {
 "src": "./MyAlka.png",
