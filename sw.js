@@ -1,15 +1,15 @@
 self.addEventListener('install', (e) => {
-  self.skipWaiting();
+self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(clients.claim());
+e.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    fetch(e.request).catch(() => {
-      return caches.match(e.request);
-    })
-  );
+e.respondWith(
+fetch(e.request).catch(() => {
+return caches.match(e.request);
+})
+);
 });
