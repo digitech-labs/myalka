@@ -2397,110 +2397,6 @@
                 </div>`;
             }
             
-            // ============================================================================
-            // MOBILE M-BANKING PORTAL HOME DASHBOARD (#home di layar HP)
-            // ============================================================================
-            if (path === '#home' && window.innerWidth < 768) {
-                const u = window.state.user;
-                const isLogged = window.state.isLoggedIn;
-                const displayName = isLogged ? u.name : 'Tamu Pengunjung';
-                const displayRole = isLogged ? u.role : 'SDIT Al Kautsar';
-                const avatarUrl = isLogged ? (u.avatar || window.getUserAvatarUrl(u.name)) : './MyAlka.png';
-                
-                const accessibleApps = window.DB.apps.filter(a => window.canUserSeeApp(a));
-                const mainShortcuts = accessibleApps.slice(0, 8).map(app => `
-                    <div onclick="selectAppFromSlider2('${app.id}')" class="flex flex-col items-center gap-1.5 cursor-pointer active:scale-90 transition-transform text-center group">
-                        <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-[20px] ${app.bg} flex items-center justify-center shadow-sm border border-white group-hover:shadow-md transition-shadow relative">
-                            <i data-lucide="${app.icon}" class="w-6 h-6 ${app.color}"></i>
-                        </div>
-                        <span class="text-[11px] font-bold text-brand-navy leading-tight truncate w-full max-w-[68px]">${app.name}</span>
-                    </div>
-                `).join('');
-
-                return `
-                <div class="w-full h-full flex flex-col px-4 pt-2 pb-6 overflow-y-auto slider-scroll animate-fade">
-                    <!-- KARTU SAMBUTAN M-BANKING -->
-                    <div class="glass-panel rounded-[26px] p-4.5 mb-4 shadow-sm border border-white/80 bg-white/40">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 shrink-0">
-                                    <img src="${avatarUrl}" class="w-full h-full object-cover">
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-[10.5px] font-semibold text-brand-muted leading-none mb-1">Assalamualaikum,</p>
-                                    <h3 class="text-[14.5px] font-extrabold text-brand-navy leading-tight truncate">${displayName} 👋</h3>
-                                </div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold ${isLogged ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600'}">
-                                ${displayRole}
-                            </span>
-                        </div>
-                        <div class="p-2.5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-transparent border border-blue-200/50 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="text-base">✨</span>
-                                <span class="text-[11px] font-bold text-brand-navy">Portal Integrasi SDIT Al Kautsar</span>
-                            </div>
-                            <button onclick="navigate('#apps')" class="text-[10.5px] font-extrabold text-brand-blue flex items-center gap-0.5 hover:underline">
-                                Semua <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- HERO BANNER ALKANEWS (FULLSCREEN 1-KLIK TANPA DOBEL MENU) -->
-                    <div onclick="selectAppFromSlider2('alkautsar')" class="glass-panel rounded-[24px] p-4 mb-4 cursor-pointer hover:bg-white/60 active:scale-[0.98] transition-all bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
-                        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="px-2 py-0.5 rounded-full bg-white/20 text-[9.5px] font-extrabold uppercase tracking-wider backdrop-blur-md">Berita & Informasi Utama</span>
-                            <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-white"></i>
-                            </div>
-                        </div>
-                        <h4 class="text-[15px] font-black leading-snug mb-1">Alkautsar Islamic News Portal</h4>
-                        <p class="text-[11px] text-blue-100 font-medium leading-relaxed mb-3">
-                            Buka portal berita Alkautsar mode layar penuh (bebas dobel menu & navigasi lega).
-                        </p>
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-blue-600 text-[11px] font-extrabold shadow-sm group-hover:scale-105 transition-transform">
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Buka Layar Penuh 🚀
-                        </div>
-                    </div>
-
-                    <!-- GRID PINTASAN APLIKASI (M-BANKING STYLE) -->
-                    <div class="glass-panel rounded-[26px] p-4 mb-4 bg-white/30 border border-white/80 shadow-sm">
-                        <div class="flex items-center justify-between mb-3.5 px-1">
-                            <h4 class="text-[12.5px] font-extrabold text-brand-navy flex items-center gap-1.5">
-                                <i data-lucide="layout-grid" class="w-4 h-4 text-brand-blue"></i> Menu Aplikasi Cepat
-                            </h4>
-                            <span class="text-[10px] font-bold text-brand-muted">${accessibleApps.length} Layanan</span>
-                        </div>
-                        <div class="grid grid-cols-4 gap-y-3.5 gap-x-2">
-                            ${mainShortcuts}
-                        </div>
-                    </div>
-
-                    <!-- MENU EDUKASI & KARYA -->
-                    <div class="grid grid-cols-2 gap-3 mb-2">
-                        <div onclick="navigate('#edukasi')" class="glass-panel rounded-[20px] p-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-white/50 active:scale-95 transition-all">
-                            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0 border border-white">
-                                <i data-lucide="gamepad-2" class="w-5 h-5"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-[11.5px] font-extrabold text-brand-navy leading-tight truncate">Games & Edukasi</div>
-                                <div class="text-[9.5px] text-brand-muted truncate">Karya Siswa Alka</div>
-                            </div>
-                        </div>
-                        <div onclick="navigate('#psb')" class="glass-panel rounded-[20px] p-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-white/50 active:scale-95 transition-all">
-                            <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 border border-white">
-                                <i data-lucide="users" class="w-5 h-5"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-[11.5px] font-extrabold text-brand-navy leading-tight truncate">PSB Datain</div>
-                                <div class="text-[9.5px] text-brand-muted truncate">Pendaftaran Siswa</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }
-
             let currentFilter = path === '#edukasi' ? 'edukasi' : 'apps';
             const visibleApps = window.DB.apps.filter(a => window.canUserSeeApp(a) && a.section === currentFilter);
             let appGridHTML = visibleApps.map(app => {
@@ -2521,14 +2417,7 @@
             
             let isIframe = false; let iframeUrl = null; let currentTitle = 'Portal'; let activeAppObj = null;
             if (activeMenu && activeMenu.type === 'iframe') {
-                // Di mode HP (Portrait), jika menu yang aktif adalah Beranda (#home),
-                // alihkan ke Native Dashboard Portal agar tidak ada dobel menu!
-                // Di mode Desktop (Landscape), tetap render Iframe AlkaNews secara penuh di samping sidebar.
-                if (isMobile && activeMenu.hash === '#home') {
-                    isIframe = false;
-                } else {
-                    isIframe = true; iframeUrl = activeMenu.url; currentTitle = activeMenu.name;
-                }
+                isIframe = true; iframeUrl = activeMenu.url; currentTitle = activeMenu.name;
             } else if (isDirectApp) {
                 const targetAppId = window.state.path.replace('#app-', '');
                 const app = window.DB.apps.find(a => String(a.id) === String(targetAppId) && window.canUserSeeApp(a));
