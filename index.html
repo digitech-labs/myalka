@@ -224,16 +224,18 @@
             ],
             apps: [
                 { id: 'alkautsar', name: 'Alkautsar Islamic', section: 'apps', icon: 'layout-dashboard', color: 'text-blue-500', bg: 'bg-blue-100', url: 'https://digitech-labs.github.io/ALKAUTSAR-ISLAMIC/', cat: 'Akademik', status: true, roles: ['Umum'] },
+                { id: 'sarprasq', name: 'SarprasQ', section: 'apps', icon: 'building-2', color: 'text-indigo-500', bg: 'bg-indigo-100', url: 'https://digitech-labs.github.io/Sarpras-Q/', cat: 'Sarana & Prasarana', status: true, roles: ['Admin'] },
                 { id: 'astaga', name: 'ASTAGA', section: 'apps', icon: 'book-open', color: 'text-purple-500', bg: 'bg-purple-100', url: 'https://digitech-labs.github.io/ASTAGA/', cat: 'Akademik', status: true, roles: ['Pegawai'] },
                 { id: 'gajiq', name: 'Gaji-Q', section: 'apps', icon: 'wallet', color: 'text-green-500', bg: 'bg-green-100', url: 'https://digitech-labs.github.io/Gaji-Q/', cat: 'Keuangan', status: true, roles: ['Pegawai'] },
                 { id: 'datain', name: 'PSB Datain', section: 'apps', icon: 'users', color: 'text-teal-500', bg: 'bg-teal-100', url: 'https://digitech-labs.github.io/datain/', cat: 'Administrasi', status: true, roles: ['Umum'] },
                 { id: 'math-adv', name: 'Math Adventure', section: 'edukasi', icon: 'gamepad-2', color: 'text-orange-500', bg: 'bg-orange-100', url: 'https://digitech-labs.github.io/math/', cat: 'Games Edukasi', status: true, roles: ['Umum'] },
                 { id: 'karya-6a', name: 'Karya Kelas 6A', section: 'edukasi', icon: 'palette', color: 'text-pink-500', bg: 'bg-pink-100', url: 'https://digitech-labs.github.io/karya/', cat: 'Karya Siswa', status: true, roles: ['Umum'] }
             ],
+            deletedAppIds: [],
             users: [
-                { id: 1, name: 'Salsabila', email: 'salsabila@alka.co.id', role: 'Super Admin', password: '123456', status: true, lastLogin: '10 menit lalu' },
-                { id: 2, name: 'Pegawai A', email: 'pegawai.a@alka.co.id', role: 'Pegawai', password: '123456', status: true, lastLogin: '1 jam lalu' },
-                { id: 3, name: 'Admin B', email: 'admin.b@alka.co.id', role: 'Admin', password: '123456', status: true, lastLogin: '2 jam lalu' }
+                { id: 1, name: 'Salsabila', email: 'salsabila@alka.co.id', role: 'Super Admin', password: '123456', status: true, lastLogin: '10 menit lalu', adminApps: [] },
+                { id: 2, name: 'Pegawai A', email: 'pegawai.a@alka.co.id', role: 'Pegawai', password: '123456', status: true, lastLogin: '1 jam lalu', adminApps: [] },
+                { id: 3, name: 'Admin B', email: 'admin.b@alka.co.id', role: 'Admin', password: '123456', status: true, lastLogin: '2 jam lalu', adminApps: [] }
             ],
             guru: [
                 {
@@ -288,22 +290,163 @@
             searchQuerySiswa: '',
             searchQueryTugas: '',
             editingMenuId: null,
-            editingAppId: null
+            editingAppId: null,
+            isUsersTableEditable: true,
+            slider2Minimized: false,
+            cloudStatus: 'connecting',
+            cloudLastSync: null
+        };
+
+        window.toggleSlider2 = function(e) {
+            if (e) e.stopPropagation();
+            window.state.slider2Minimized = !window.state.slider2Minimized;
+            window.render();
+        };
+
+        window.selectAppFromSlider2 = function(appId) {
+            window.state.slider2Minimized = true;
+            window.navigate('#app-' + appId);
         };
 
         const AVAILABLE_COLORS = [
             { id: 'blue', text: 'text-blue-500', bg: 'bg-blue-100' },
+            { id: 'indigo', text: 'text-indigo-500', bg: 'bg-indigo-100' },
             { id: 'purple', text: 'text-purple-500', bg: 'bg-purple-100' },
             { id: 'green', text: 'text-green-500', bg: 'bg-green-100' },
             { id: 'teal', text: 'text-teal-500', bg: 'bg-teal-100' },
             { id: 'yellow', text: 'text-yellow-500', bg: 'bg-yellow-100' },
             { id: 'orange', text: 'text-orange-500', bg: 'bg-orange-100' },
-            { id: 'pink', text: 'text-pink-500', bg: 'bg-pink-100' }
+            { id: 'pink', text: 'text-pink-500', bg: 'bg-pink-100' },
+            { id: 'red', text: 'text-red-500', bg: 'bg-red-100' }
         ];
 
+        window.makeEmailFromName = function(name) {
+            const slug = String(name || 'user').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+            return (slug || 'user') + '@alka.co.id';
+        };
+
+        window.saveSessionToStorage = function() {
+            try {
+                if (window.state.isLoggedIn && window.state.user) {
+                    localStorage.setItem('alka_portal_session', JSON.stringify({
+                        isLoggedIn: true,
+                        user: window.state.user
+                    }));
+                } else {
+                    localStorage.removeItem('alka_portal_session');
+                }
+            } catch (e) {}
+        };
+
+        window.restoreSessionFromStorage = function() {
+            try {
+                const raw = localStorage.getItem('alka_portal_session');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.isLoggedIn && parsed.user) {
+                    window.state.isLoggedIn = true;
+                    window.state.user = parsed.user;
+                }
+            } catch (e) {}
+        };
+
+        // ============================================================================
+        // SINKRONISASI OTOMATIS DATA PEGAWAI <-> HAK AKSES PORTAL & APLIKASI DEFAULT
+        // ============================================================================
+        window.syncUsersWithGuru = function() {
+            if (!Array.isArray(window.DB.users)) window.DB.users = [];
+            if (!Array.isArray(window.DB.guru)) window.DB.guru = [];
+
+            window.DB.users.forEach(u => {
+                if (!u.password) u.password = DEFAULT_PASSWORD;
+                if (!Array.isArray(u.adminApps)) u.adminApps = [];
+                if (!u.email) u.email = window.makeEmailFromName(u.name);
+                if (u.status === undefined) u.status = true;
+            });
+
+            window.DB.guru.forEach(g => {
+                if (!g.password) g.password = DEFAULT_PASSWORD;
+                if (!g.nama) return;
+                const cleanNama = String(g.nama).trim().toLowerCase();
+                let matchedUser = window.DB.users.find(u =>
+                    (u.guruId !== undefined && String(u.guruId) === String(g.id)) ||
+                    (u.name && String(u.name).trim().toLowerCase() === cleanNama)
+                );
+
+                if (!matchedUser) {
+                    window.DB.users.push({
+                        id: Date.now() + Math.floor(Math.random() * 100000),
+                        guruId: g.id,
+                        name: g.nama,
+                        email: g.email || window.makeEmailFromName(g.nama),
+                        role: 'Pegawai',
+                        password: g.password || DEFAULT_PASSWORD,
+                        status: g.status !== false,
+                        lastLogin: 'Belum pernah',
+                        adminApps: Array.isArray(g.adminApps) ? [...g.adminApps] : []
+                    });
+                } else {
+                    matchedUser.guruId = g.id;
+                    if (!matchedUser.email) matchedUser.email = window.makeEmailFromName(matchedUser.name);
+                    if (!Array.isArray(matchedUser.adminApps)) {
+                        matchedUser.adminApps = Array.isArray(g.adminApps) ? [...g.adminApps] : [];
+                    }
+                    g.adminApps = [...matchedUser.adminApps];
+                }
+            });
+
+            if (window.state.isLoggedIn && window.state.user) {
+                const activeU = window.DB.users.find(u =>
+                    String(u.id) === String(window.state.user.id) ||
+                    (u.name && window.state.user.name && u.name.trim().toLowerCase() === window.state.user.name.trim().toLowerCase())
+                );
+                if (activeU) {
+                    window.state.user.role = activeU.role || window.state.user.role;
+                    window.state.user.adminApps = Array.isArray(activeU.adminApps) ? [...activeU.adminApps] : [];
+                    window.saveSessionToStorage();
+                }
+            }
+        };
+
         window.ensureDefaultPasswords = function() {
+            if (!Array.isArray(window.DB.deletedAppIds)) window.DB.deletedAppIds = [];
+            if (Array.isArray(window.DB.apps)) {
+                window.DB.apps.forEach((a, idx) => {
+                    if (a.id === undefined || a.id === null || a.id === '') a.id = 'app-' + (idx + 1);
+                    a.id = String(a.id);
+                    a.name = String(a.name || a.nama || 'Aplikasi');
+                    a.section = (String(a.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
+                    a.icon = String(a.icon || a.ikon || 'layout-grid');
+                    a.color = String(a.color || 'text-blue-500');
+                    a.bg = String(a.bg || 'bg-blue-100');
+                    a.url = String(a.url || a.link || '');
+                    a.cat = String(a.cat || a.kategori || (a.section === 'edukasi' ? 'Karya & Edukasi' : 'Aplikasi Utama'));
+                    a.status = (a.status === false || a.status === 'false' || a.status === 0) ? false : true;
+
+                    if (typeof a.roles === 'string') {
+                        a.roles = a.roles.split(',').map(r => r.trim()).filter(Boolean);
+                    }
+                    if (!Array.isArray(a.roles) || a.roles.length === 0) {
+                        a.roles = ['Umum'];
+                    } else {
+                        a.roles = a.roles.map(r => {
+                            const low = String(r).toLowerCase().trim();
+                            if (low === 'umum') return 'Umum';
+                            if (low === 'admin' || low === 'super admin') return 'Admin';
+                            if (low === 'pegawai' || low === 'guru') return 'Pegawai';
+                            if (low === 'warid' || low === 'siswa' || low === 'wali') return 'Warid';
+                            return r;
+                        });
+                    }
+                });
+            }
+
             if (Array.isArray(window.DB.users)) {
-                window.DB.users.forEach(u => { if (!u.password) u.password = DEFAULT_PASSWORD; });
+                window.DB.users.forEach(u => {
+                    if (!u.password) u.password = DEFAULT_PASSWORD;
+                    if (!Array.isArray(u.adminApps)) u.adminApps = [];
+                    else u.adminApps = u.adminApps.map(x => String(x));
+                });
             }
             if (Array.isArray(window.DB.guru)) {
                 window.DB.guru.forEach(g => { if (!g.password) g.password = DEFAULT_PASSWORD; });
@@ -311,6 +454,41 @@
             if (Array.isArray(window.DB.siswa)) {
                 window.DB.siswa.forEach(s => { if (!s.password) s.password = DEFAULT_PASSWORD; });
             }
+            window.syncUsersWithGuru();
+        };
+
+        // ============================================================================
+        // ATURAN VISIBILITAS APLIKASI BERBASIS ROLE & DELEGASI ADMIN PER APLIKASI
+        // ============================================================================
+        window.canUserSeeApp = function(app) {
+            if (!app || app.status === false) return false;
+            const roles = Array.isArray(app.roles) ? app.roles : ['Umum'];
+
+            // 1. Jika user login sebagai Super Admin atau Admin, semua aplikasi aktif tampil di Slider 2
+            if (window.state.isLoggedIn && window.state.user) {
+                const u = window.state.user;
+                const uRole = u.role || '';
+                const uAdminApps = Array.isArray(u.adminApps) ? u.adminApps.map(String) : [];
+
+                if (uRole === 'Super Admin' || uRole === 'Admin') return true;
+                if (uAdminApps.includes(String(app.id))) return true;
+            }
+
+            // 2. Aplikasi Umum: otomatis tampil untuk semua pengunjung (bahkan Tamu tanpa login)
+            if (roles.includes('Umum')) return true;
+
+            // Jika belum login, aplikasi non-Umum disembunyikan
+            if (!window.state.isLoggedIn || !window.state.user) return false;
+
+            const uRole = window.state.user.role || '';
+
+            // 3. Aplikasi Khusus Pegawai (roles: ['Pegawai'])
+            if (roles.includes('Pegawai') && uRole === 'Pegawai') return true;
+
+            // 4. Aplikasi Khusus Siswa (roles: ['Warid'])
+            if (roles.includes('Warid') && uRole === 'Warid') return true;
+
+            return false;
         };
 
         window.getUserAvatarUrl = function(name) {
@@ -671,17 +849,49 @@
         }
 
         async function initCloud() {
-            if (!supabaseClient) { window.ensureDefaultPasswords(); window.render(); return; }
+            window.restoreSessionFromStorage();
+            try {
+                const cachedState = localStorage.getItem('alka_portal_state_cache');
+                if (cachedState) {
+                    const parsedCache = JSON.parse(cachedState);
+                    if (parsedCache && typeof parsedCache === 'object') {
+                        if (Array.isArray(parsedCache.menus)) window.DB.menus = parsedCache.menus;
+                        if (Array.isArray(parsedCache.deletedAppIds)) window.DB.deletedAppIds = parsedCache.deletedAppIds;
+                        if (Array.isArray(parsedCache.apps)) window.DB.apps = parsedCache.apps;
+                        if (Array.isArray(parsedCache.users)) window.DB.users = parsedCache.users;
+                        if (Array.isArray(parsedCache.logs)) window.DB.logs = parsedCache.logs;
+                        if (Array.isArray(parsedCache.guru)) window.DB.guru = parsedCache.guru;
+                        if (Array.isArray(parsedCache.siswa)) window.DB.siswa = ensureNaturalSiswaOrder(parsedCache.siswa);
+                    }
+                }
+            } catch (e) {}
+
+            if (!supabaseClient) { 
+                window.state.cloudStatus = 'offline';
+                window.ensureDefaultPasswords(); 
+                window.render(); 
+                return; 
+            }
             try {
                 const { data, error } = await supabaseClient.from('portal_state').select('data').eq('id', 1).maybeSingle();
                 if (!error && data && data.data && Object.keys(data.data).length > 0) {
                     const cloudDB = data.data;
-                    if (cloudDB.menus) window.DB.menus = cloudDB.menus;
-                    if (cloudDB.apps) window.DB.apps = cloudDB.apps;
-                    if (cloudDB.users) window.DB.users = cloudDB.users;
-                    if (cloudDB.logs) window.DB.logs = cloudDB.logs;
-                    if (cloudDB.guru) window.DB.guru = cloudDB.guru;
-                    if (cloudDB.siswa) window.DB.siswa = ensureNaturalSiswaOrder(cloudDB.siswa);
+                    if (Array.isArray(cloudDB.menus)) window.DB.menus = cloudDB.menus;
+                    if (Array.isArray(cloudDB.deletedAppIds)) window.DB.deletedAppIds = cloudDB.deletedAppIds;
+                    if (Array.isArray(cloudDB.apps)) window.DB.apps = cloudDB.apps;
+                    if (Array.isArray(cloudDB.users)) window.DB.users = cloudDB.users;
+                    if (Array.isArray(cloudDB.logs)) window.DB.logs = cloudDB.logs;
+                    if (Array.isArray(cloudDB.guru)) window.DB.guru = cloudDB.guru;
+                    if (Array.isArray(cloudDB.siswa)) window.DB.siswa = ensureNaturalSiswaOrder(cloudDB.siswa);
+                    try { localStorage.setItem('alka_portal_state_cache', JSON.stringify(cloudDB)); } catch (e) {}
+                    window.state.cloudStatus = 'connected';
+                    window.state.cloudLastSync = new Date().toLocaleTimeString('id-ID');
+                } else if (error) {
+                    window.state.cloudStatus = 'error';
+                    console.warn('Supabase notice:', error.message);
+                } else {
+                    window.state.cloudStatus = 'connected';
+                    window.state.cloudLastSync = new Date().toLocaleTimeString('id-ID');
                 }
                 window.ensureDefaultPasswords();
                 window.render();
@@ -692,12 +902,14 @@
                         const channel = supabaseClient.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'portal_state' }, (payload) => {
                             const newData = payload.new && payload.new.data ? payload.new.data : null;
                             if (newData) {
-                                if (newData.menus) window.DB.menus = newData.menus;
-                                if (newData.apps) window.DB.apps = newData.apps;
-                                if (newData.users) window.DB.users = newData.users;
-                                if (newData.logs) window.DB.logs = newData.logs;
-                                if (newData.guru) window.DB.guru = newData.guru;
-                                if (newData.siswa) window.DB.siswa = ensureNaturalSiswaOrder(newData.siswa);
+                                if (Array.isArray(newData.menus)) window.DB.menus = newData.menus;
+                                if (Array.isArray(newData.deletedAppIds)) window.DB.deletedAppIds = newData.deletedAppIds;
+                                if (Array.isArray(newData.apps)) window.DB.apps = newData.apps;
+                                if (Array.isArray(newData.users)) window.DB.users = newData.users;
+                                if (Array.isArray(newData.logs)) window.DB.logs = newData.logs;
+                                if (Array.isArray(newData.guru)) window.DB.guru = newData.guru;
+                                if (Array.isArray(newData.siswa)) window.DB.siswa = ensureNaturalSiswaOrder(newData.siswa);
+                                try { localStorage.setItem('alka_portal_state_cache', JSON.stringify(newData)); } catch (e) {}
                                 window.ensureDefaultPasswords();
                                 window.render();
                             }
@@ -712,18 +924,27 @@
         }
 
         window.globalSave = async function() {
+            if (window.state.editingMenuId !== null && window.state.editingMenuId !== undefined) {
+                window.commitMenuInlineSilent(window.state.editingMenuId);
+            }
+            if (window.state.editingAppId !== null && window.state.editingAppId !== undefined) {
+                window.commitAppInlineSilent(window.state.editingAppId);
+            }
             window.ensureDefaultPasswords();
+            const dataToSave = {
+                menus: window.DB.menus,
+                apps: window.DB.apps,
+                deletedAppIds: window.DB.deletedAppIds || [],
+                users: window.DB.users,
+                logs: window.DB.logs,
+                guru: window.DB.guru,
+                siswa: window.DB.siswa
+            };
+            try { localStorage.setItem('alka_portal_state_cache', JSON.stringify(dataToSave)); } catch (e) {}
+
             if (!supabaseClient) { window.showToast('Data disimpan lokal.', 'info', 'text-orange-500'); window.render(); return; }
             window.showToast('Menyimpan ke Supabase...', 'cloud-upload', 'text-blue-500');
             try {
-                const dataToSave = {
-                    menus: window.DB.menus,
-                    apps: window.DB.apps,
-                    users: window.DB.users,
-                    logs: window.DB.logs,
-                    guru: window.DB.guru,
-                    siswa: window.DB.siswa
-                };
                 const { error } = await supabaseClient.from('portal_state').upsert({ id: 1, data: dataToSave });
                 if (error) throw error;
 
@@ -857,91 +1078,819 @@
 
         window.startEditMenu = function(id) { window.state.editingMenuId = id; window.render(); };
         window.cancelEditMenu = function() { window.state.editingMenuId = null; window.render(); };
-        window.saveMenuInline = function(id) { const menu = window.DB.menus.find(m => m.id === id); if (menu) { menu.name = document.getElementById(`editMenuName-${id}`).value; menu.icon = document.getElementById(`editMenuIcon-${id}`).value; if (menu.type === 'iframe') { menu.url = document.getElementById(`editMenuUrl-${id}`).value; } window.logActivity('Mengubah detail menu', menu.name, 'Menu Portal', 'blue'); window.showToast('Menu berhasil diperbarui!'); } window.state.editingMenuId = null; window.render(); };
-        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => m.id === id); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); } };
+        window.commitMenuInlineSilent = function(id) {
+            const menu = window.DB.menus.find(m => String(m.id) === String(id));
+            if (menu) {
+                const nameEl = document.getElementById(`editMenuName-${id}`);
+                const iconEl = document.getElementById(`editMenuIcon-${id}`);
+                const urlEl = document.getElementById(`editMenuUrl-${id}`);
+                if (nameEl && nameEl.value.trim()) menu.name = nameEl.value.trim();
+                if (iconEl && iconEl.value.trim()) menu.icon = iconEl.value.trim();
+                if (menu.type === 'iframe' && urlEl) menu.url = urlEl.value.trim();
+            }
+            window.state.editingMenuId = null;
+        };
+        window.saveMenuInline = function(id) {
+            window.commitMenuInlineSilent(id);
+            const menu = window.DB.menus.find(m => String(m.id) === String(id));
+            if (menu) {
+                window.logActivity('Mengubah detail menu', menu.name, 'Menu Portal', 'blue');
+                window.showToast('Menu berhasil diperbarui!');
+            }
+            window.render();
+        };
+        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => String(m.id) === String(id)); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); } };
         
-        window.startEditApp = function(id) { window.state.editingAppId = id; window.render(); };
+        // ============================================================================
+        // MANAJEMEN APLIKASI: EDIT INLINE, TAMBAH APLIKASI, & HAPUS APLIKASI
+        // ============================================================================
+        window.startEditApp = function(id) { window.state.editingAppId = String(id); window.render(); };
         window.cancelEditApp = function() { window.state.editingAppId = null; window.render(); };
-        window.toggleUmumInline = function(id) { const isUmum = document.getElementById(`editAppRole-Umum-${id}`).checked; const cbPegawai = document.getElementById(`editAppRole-Pegawai-${id}`); const cbWarid = document.getElementById(`editAppRole-Warid-${id}`); if (isUmum) { cbPegawai.checked = false; cbPegawai.disabled = true; cbWarid.checked = false; cbWarid.disabled = true; } else { cbPegawai.disabled = false; cbWarid.disabled = false; } };
-        window.saveAppInline = function(id) { const app = window.DB.apps.find(a => a.id === id); if (app) { app.name = document.getElementById(`editAppName-${id}`).value; app.icon = document.getElementById(`editAppIcon-${id}`).value; app.url = document.getElementById(`editAppUrl-${id}`).value; app.section = document.getElementById(`editAppSection-${id}`).value; const colorVal = document.getElementById(`editAppColor-${id}`).value; const foundColor = AVAILABLE_COLORS.find(c => c.id === colorVal); if(foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; } let newRoles = []; if (document.getElementById(`editAppRole-Umum-${id}`).checked) { newRoles.push('Umum'); } else { if (document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai'); if (document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid'); } app.roles = newRoles; window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue'); window.showToast('Aplikasi berhasil diperbarui!'); } window.state.editingAppId = null; window.render(); };
-        window.toggleAppStatus = function(id) { const app = window.DB.apps.find(a => a.id === id); if (app) { app.status = !app.status; window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red'); window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`); window.render(); } };
-        window.toggleUserStatus = function(id) { const user = window.DB.users.find(u => u.id === id); if (user && user.id !== window.state.user.id) { user.status = !user.status; window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red'); window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`); window.render(); } };
 
-        window.showAddUserModal = function() {
-            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
-            const roleOptions = roles.map(r => `<option value="${r}">${r}</option>`).join('');
-            const html = `
-                <div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Tambah Pengguna</h2></div>
-                <form onsubmit="saveNewUser(event)" class="flex flex-col gap-3">
-                    <input type="text" id="userName" required placeholder="Nama Lengkap" class="input-glass">
-                    <select id="userRole" class="input-glass">${roleOptions}</select>
-                    <input type="text" id="userPassword" value="${DEFAULT_PASSWORD}" required placeholder="Password (Default: 123456)" class="input-glass font-mono">
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan User</button>
-                    </div>
-                </form>`;
-            window.openModal(html);
+        window.toggleUmumInline = function(id) {
+            const isUmum = document.getElementById(`editAppRole-Umum-${id}`).checked;
+            const cbAdmin = document.getElementById(`editAppRole-Admin-${id}`);
+            const cbPegawai = document.getElementById(`editAppRole-Pegawai-${id}`);
+            const cbWarid = document.getElementById(`editAppRole-Warid-${id}`);
+            if (isUmum) {
+                if (cbAdmin) { cbAdmin.checked = false; cbAdmin.disabled = true; }
+                if (cbPegawai) { cbPegawai.checked = false; cbPegawai.disabled = true; }
+                if (cbWarid) { cbWarid.checked = false; cbWarid.disabled = true; }
+            } else {
+                if (cbAdmin) cbAdmin.disabled = false;
+                if (cbPegawai) cbPegawai.disabled = false;
+                if (cbWarid) cbWarid.disabled = false;
+            }
         };
 
-        window.saveNewUser = function(event) {
-            event.preventDefault();
-            const name = document.getElementById('userName').value;
-            const role = document.getElementById('userRole').value;
-            const password = document.getElementById('userPassword').value || DEFAULT_PASSWORD;
-            const newUser = {
-                id: Date.now(),
-                name: name,
-                email: name.toLowerCase().replace(/ /g, '') + '@alka.co.id',
-                role: role,
-                password: password,
-                status: true,
-                lastLogin: 'Belum pernah'
-            };
-            window.DB.users.unshift(newUser);
-            window.logActivity('Menambahkan pengguna baru', name, 'Pengguna', 'blue');
-            window.showToast('Pengguna berhasil ditambahkan!');
-            window.closeModal();
+        window.toggleAppRoleDirect = function(appId, roleName, isChecked) {
+            const app = window.DB.apps.find(a => String(a.id) === String(appId));
+            if (!app) return;
+            if (!Array.isArray(app.roles)) app.roles = ['Umum'];
+
+            if (roleName === 'Umum') {
+                if (isChecked) {
+                    app.roles = ['Umum'];
+                } else {
+                    app.roles = ['Admin', 'Pegawai'];
+                }
+            } else {
+                app.roles = app.roles.filter(r => r !== 'Umum');
+                if (isChecked) {
+                    if (!app.roles.includes(roleName)) app.roles.push(roleName);
+                } else {
+                    app.roles = app.roles.filter(r => r !== roleName);
+                    if (app.roles.length === 0) app.roles = ['Umum'];
+                }
+            }
+            window.logActivity(`Mengubah visibilitas role aplikasi ${app.name}`, app.roles.join(', '), 'Aplikasi', 'blue');
+            window.showToast(`Visibilitas ${app.name}: ${app.roles.join(', ')}`);
+            window.render();
+            window.globalSave();
+        };
+
+        window.commitAppInlineSilent = function(id) {
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                const nameEl = document.getElementById(`editAppName-${id}`);
+                const iconEl = document.getElementById(`editAppIcon-${id}`);
+                const urlEl = document.getElementById(`editAppUrl-${id}`);
+                const secEl = document.getElementById(`editAppSection-${id}`);
+                const catEl = document.getElementById(`editAppCat-${id}`);
+                const colEl = document.getElementById(`editAppColor-${id}`);
+                const umumEl = document.getElementById(`editAppRole-Umum-${id}`);
+
+                if (nameEl && nameEl.value.trim()) app.name = nameEl.value.trim();
+                if (iconEl && iconEl.value.trim()) app.icon = iconEl.value.trim();
+                if (urlEl) app.url = urlEl.value.trim();
+                if (secEl) app.section = secEl.value;
+                if (catEl && catEl.value.trim()) app.cat = catEl.value.trim();
+
+                if (colEl) {
+                    const foundColor = AVAILABLE_COLORS.find(c => c.id === colEl.value);
+                    if (foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; }
+                }
+
+                if (umumEl) {
+                    let newRoles = [];
+                    if (umumEl.checked) {
+                        newRoles.push('Umum');
+                    } else {
+                        if (document.getElementById(`editAppRole-Admin-${id}`) && document.getElementById(`editAppRole-Admin-${id}`).checked) newRoles.push('Admin');
+                        if (document.getElementById(`editAppRole-Pegawai-${id}`) && document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai');
+                        if (document.getElementById(`editAppRole-Warid-${id}`) && document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid');
+                        if (newRoles.length === 0) newRoles.push('Admin');
+                    }
+                    app.roles = newRoles;
+                }
+            }
+            window.state.editingAppId = null;
+        };
+
+        window.saveAppInline = function(id) {
+            window.commitAppInlineSilent(id);
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue');
+                window.showToast('Aplikasi berhasil diperbarui!');
+            }
             window.render();
         };
 
-        window.showEditUserModal = function(id) {
-            const user = window.DB.users.find(u => u.id === id);
-            if (!user) return;
-            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
-            const roleOptions = roles.map(r => `<option value="${r}" ${user.role === r ? 'selected' : ''}>${r}</option>`).join('');
-            const html = `
-                <div class="mb-4"><h2 class="text-xl font-bold text-brand-navy mb-1">Edit Pengguna</h2></div>
-                <form onsubmit="saveEditUser(event, ${user.id})" class="flex flex-col gap-3">
-                    <input type="text" id="editUserName" required value="${user.name}" class="input-glass">
-                    <select id="editUserRole" class="input-glass">${roleOptions}</select>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[10px] font-bold text-brand-muted uppercase">Password</label>
-                        <input type="text" id="editUserPassword" required value="${user.password || DEFAULT_PASSWORD}" class="input-glass font-mono">
-                    </div>
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-brand-muted hover:bg-white/50 rounded-xl">Batal</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan</button>
-                    </div>
-                </form>`;
-            window.openModal(html);
-        };
-
-        window.saveEditUser = function(event, id) {
-            event.preventDefault();
-            const user = window.DB.users.find(u => u.id === id);
-            if (user) {
-                user.name = document.getElementById('editUserName').value;
-                user.role = document.getElementById('editUserRole').value;
-                user.password = document.getElementById('editUserPassword').value || DEFAULT_PASSWORD;
-                window.logActivity('Mengubah data pengguna', user.name, 'Pengguna', 'purple');
-                window.showToast('Data berhasil diperbarui!');
-                window.closeModal();
+        window.toggleAppStatus = function(id) {
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                app.status = !app.status;
+                window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
+                window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
                 window.render();
             }
         };
 
-        window.navigate = function(hash) { window.closeAllPopups(); window.location.hash = hash; window.state.path = hash; window.state.zoom = 1.0; window.render(); };
+        window.toggleUmumModalAdd = function() {
+            const isUmum = document.getElementById('newAppRoleUmum').checked;
+            ['newAppRoleAdmin', 'newAppRolePegawai', 'newAppRoleWarid'].forEach(cbId => {
+                const el = document.getElementById(cbId);
+                if (!el) return;
+                if (isUmum) {
+                    el.checked = false;
+                    el.disabled = true;
+                } else {
+                    el.disabled = false;
+                }
+            });
+        };
+
+        window.showAddAppModal = function(defaultSection = 'apps') {
+            const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}">${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+            const html = `
+                <div class="mb-4 border-b border-gray-200 pb-3">
+                    <h2 class="text-lg font-extrabold text-brand-navy">Tambah Aplikasi / Karya Baru</h2>
+                    <p class="text-[11px] text-brand-muted">Aplikasi yang ditambahkan akan otomatis terintegrasi ke Portal & pilihan Hak Akses Admin Aplikasi.</p>
+                </div>
+                <form onsubmit="saveNewApp(event)" class="flex flex-col gap-3.5 max-h-[68vh] overflow-y-auto slider-scroll p-1 pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Nama Aplikasi *</label>
+                            <input type="text" id="newAppName" required placeholder="Contoh: SarprasQ / E-Rapor" class="input-glass py-2">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Kategori *</label>
+                            <input type="text" id="newAppCat" required placeholder="Contoh: Sarana & Prasarana / Akademik" value="${defaultSection === 'edukasi' ? 'Karya Siswa' : 'Akademik'}" class="input-glass py-2">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Laci Penempatan</label>
+                            <select id="newAppSection" class="input-glass py-2 cursor-pointer">
+                                <option value="apps" ${defaultSection === 'apps' ? 'selected' : ''}>Laci Aplikasi Utama</option>
+                                <option value="edukasi" ${defaultSection === 'edukasi' ? 'selected' : ''}>Laci Karya & Edukasi</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Nama Ikon (Lucide)</label>
+                            <input type="text" id="newAppIcon" value="layout-grid" required placeholder="Contoh: building-2, wallet" class="input-glass py-2">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Tema Warna</label>
+                            <select id="newAppColor" class="input-glass py-2 cursor-pointer">${colorOptions}</select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold text-brand-muted uppercase">Tautan / URL Aplikasi (Iframe) *</label>
+                        <input type="url" id="newAppUrl" required placeholder="https://digitech-labs.github.io/..." class="input-glass py-2">
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200/70 flex flex-col gap-2">
+                        <label class="text-[10px] font-extrabold text-brand-blue uppercase">Aturan Visibilitas Aplikasi di Portal</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-brand-navy">
+                                <input type="checkbox" id="newAppRoleUmum" onchange="toggleUmumModalAdd()" class="w-4 h-4 cursor-pointer">
+                                <span>Umum</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-indigo-700">
+                                <input type="checkbox" id="newAppRoleAdmin" checked class="w-4 h-4 cursor-pointer">
+                                <span>Admin</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-emerald-700">
+                                <input type="checkbox" id="newAppRolePegawai" class="w-4 h-4 cursor-pointer">
+                                <span>Pegawai</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-amber-700">
+                                <input type="checkbox" id="newAppRoleWarid" class="w-4 h-4 cursor-pointer">
+                                <span>Warid</span>
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-brand-muted leading-tight">
+                            *Jika <strong>Umum</strong> dicentang, aplikasi tampil untuk semua pengunjung. Jika tidak dicentang, Anda bebas memilih kombinasi <strong>Admin</strong>, <strong>Pegawai</strong>, atau <strong>Warid</strong>.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-2 pt-3 border-t border-gray-200">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Simpan Aplikasi</button>
+                    </div>
+                </form>
+            `;
+            window.openModal(html);
+        };
+        window.saveNewApp = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('newAppName').value.trim();
+            const cat = document.getElementById('newAppCat').value.trim() || 'Akademik';
+            const section = document.getElementById('newAppSection').value;
+            const icon = document.getElementById('newAppIcon').value.trim() || 'layout-grid';
+            const colorId = document.getElementById('newAppColor').value;
+            const url = document.getElementById('newAppUrl').value.trim();
+
+            let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || ('app-' + Date.now());
+            let appId = baseSlug;
+            if (window.DB.apps.some(a => a.id === appId)) {
+                appId = baseSlug + '-' + Math.floor(Math.random() * 1000);
+            }
+
+            if (Array.isArray(window.DB.deletedAppIds)) {
+                window.DB.deletedAppIds = window.DB.deletedAppIds.filter(x => x !== appId);
+            }
+
+            const foundColor = AVAILABLE_COLORS.find(c => c.id === colorId) || AVAILABLE_COLORS[0];
+            let roles = [];
+            if (document.getElementById('newAppRoleUmum').checked) {
+                roles.push('Umum');
+            } else {
+                if (document.getElementById('newAppRoleAdmin').checked) roles.push('Admin');
+                if (document.getElementById('newAppRolePegawai').checked) roles.push('Pegawai');
+                if (document.getElementById('newAppRoleWarid').checked) roles.push('Warid');
+                if (roles.length === 0) roles.push('Admin');
+            }
+
+            const newApp = {
+                id: appId,
+                name: name,
+                section: section,
+                icon: icon,
+                color: foundColor.text,
+                bg: foundColor.bg,
+                url: url,
+                cat: cat,
+                status: true,
+                roles: roles
+            };
+
+            window.DB.apps.push(newApp);
+            window.logActivity('Menambahkan aplikasi baru', name, 'Aplikasi', 'green');
+            window.showToast(`Aplikasi "${name}" berhasil ditambahkan! Menyimpan ke Cloud...`);
+            window.closeModal();
+            window.render();
+            await window.globalSave();
+        };
+
+        window.confirmDeleteApp = function(id) {
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (!app) return;
+            const html = `
+                <div class="text-center p-2 max-w-[360px] mx-auto">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-3 border border-white shadow-sm">
+                        <i data-lucide="trash-2" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-[16px] font-extrabold text-brand-navy mb-1">Hapus Aplikasi "${app.name}"?</h3>
+                    <p class="text-[11.5px] text-brand-muted mb-5 leading-relaxed">
+                        Aplikasi ini akan dihapus dari portal dan daftar delegasi Hak Akses Admin Aplikasi.
+                    </p>
+                    <div class="flex items-center justify-center gap-2">
+                        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
+                        <button type="button" onclick="executeDeleteApp('${app.id}')" class="flex-1 py-2.5 text-xs font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md">Ya, Hapus</button>
+                    </div>
+                </div>
+            `;
+            window.openModal(html);
+        };
+        window.executeDeleteApp = async function(id) {
+            const idx = window.DB.apps.findIndex(a => String(a.id) === String(id));
+            if (idx !== -1) {
+                const removed = window.DB.apps.splice(idx, 1)[0];
+                if (!Array.isArray(window.DB.deletedAppIds)) window.DB.deletedAppIds = [];
+                if (!window.DB.deletedAppIds.includes(String(id))) window.DB.deletedAppIds.push(String(id));
+
+                if (Array.isArray(window.DB.users)) {
+                    window.DB.users.forEach(u => {
+                        if (Array.isArray(u.adminApps)) {
+                            u.adminApps = u.adminApps.filter(appId => String(appId) !== String(id));
+                        }
+                    });
+                }
+                if (Array.isArray(window.DB.guru)) {
+                    window.DB.guru.forEach(g => {
+                        if (Array.isArray(g.adminApps)) {
+                            g.adminApps = g.adminApps.filter(appId => String(appId) !== String(id));
+                        }
+                    });
+                }
+                window.logActivity('Menghapus aplikasi', removed.name, 'Aplikasi', 'red');
+                window.showToast(`Aplikasi "${removed.name}" telah dihapus.`, 'trash-2', 'text-red-500');
+            }
+            window.closeModal();
+            window.render();
+            await window.globalSave();
+        };
+
+        // ============================================================================
+        // MANAJEMEN HAK AKSES PORTAL (#admin-users) & DELEGASI ADMIN APLIKASI
+        // ============================================================================
+        window.toggleUsersTableEditMode = function() {
+            window.state.isUsersTableEditable = !window.state.isUsersTableEditable;
+            if (window.state.isUsersTableEditable) {
+                window.showToast('Mode Edit Tabel AKTIF! Anda dapat mencentang langsung di tabel.', 'unlock', 'text-amber-500');
+            } else {
+                window.showToast('Mode Edit Tabel TERKUNCI. Perubahan aman dari klik tidak sengaja.', 'lock', 'text-blue-500');
+            }
+            window.render();
+        };
+
+        window.toggleUserAppAdmin = function(userId, appId, isChecked) {
+            if (!window.state.isUsersTableEditable) {
+                window.showToast('Aktifkan Mode Edit Tabel terlebih dahulu!', 'alert-circle', 'text-amber-500');
+                return;
+            }
+            const u = window.DB.users.find(x => String(x.id) === String(userId));
+            if (!u) return;
+            if (!Array.isArray(u.adminApps)) u.adminApps = [];
+
+            if (isChecked) {
+                if (!u.adminApps.includes(appId)) u.adminApps.push(appId);
+            } else {
+                u.adminApps = u.adminApps.filter(x => x !== appId);
+            }
+
+            if (u.guruId !== undefined) {
+                const g = window.DB.guru.find(x => String(x.id) === String(u.guruId));
+                if (g) g.adminApps = [...u.adminApps];
+            }
+
+            if (window.state.isLoggedIn && window.state.user &&
+                (String(window.state.user.id) === String(u.id) ||
+                 window.state.user.name.trim().toLowerCase() === u.name.trim().toLowerCase())) {
+                window.state.user.adminApps = [...u.adminApps];
+            }
+
+            const appObj = window.DB.apps.find(a => a.id === appId);
+            const appName = appObj ? appObj.name : appId;
+            window.logActivity(`${isChecked ? 'Memberikan' : 'Mencabut'} hak Admin ${appName}`, u.name, 'Hak Akses', isChecked ? 'green' : 'orange');
+            window.render();
+        };
+
+        window.toggleCheckAllAppAdmin = function(appId, isChecked) {
+            if (!window.state.isUsersTableEditable) {
+                window.showToast('Aktifkan Mode Edit Tabel terlebih dahulu!', 'alert-circle', 'text-amber-500');
+                return;
+            }
+            const filteredUsers = window.getFilteredUsersForTable();
+            if (filteredUsers.length === 0) return;
+
+            filteredUsers.forEach(u => {
+                if (!Array.isArray(u.adminApps)) u.adminApps = [];
+                if (isChecked) {
+                    if (!u.adminApps.includes(appId)) u.adminApps.push(appId);
+                } else {
+                    u.adminApps = u.adminApps.filter(x => x !== appId);
+                }
+
+                if (u.guruId !== undefined) {
+                    const g = window.DB.guru.find(x => String(x.id) === String(u.guruId));
+                    if (g) g.adminApps = [...u.adminApps];
+                }
+
+                if (window.state.isLoggedIn && window.state.user &&
+                    (String(window.state.user.id) === String(u.id) ||
+                     window.state.user.name.trim().toLowerCase() === u.name.trim().toLowerCase())) {
+                    window.state.user.adminApps = [...u.adminApps];
+                }
+            });
+
+            const appObj = window.DB.apps.find(a => a.id === appId);
+            const appName = appObj ? appObj.name : appId;
+            window.logActivity(`Ubah massal delegasi admin ${appName}`, isChecked ? 'Centang Semua' : 'Batal Semua', 'Hak Akses', isChecked ? 'green' : 'slate');
+            window.showToast(`${isChecked ? 'Semua akun dijadikan Admin' : 'Hak Admin dicabut untuk semua akun'} di aplikasi ${appName}!`, isChecked ? 'check-circle' : 'minus-circle', isChecked ? 'text-green-500' : 'text-slate-500');
+            window.render();
+        };
+
+        window.changeUserRole = function(userId, newRole) {
+            if (!window.state.isUsersTableEditable) {
+                window.showToast('Aktifkan Mode Edit Tabel terlebih dahulu!', 'alert-circle', 'text-amber-500');
+                return;
+            }
+            const u = window.DB.users.find(x => String(x.id) === String(userId));
+            if (u) {
+                u.role = newRole;
+                if (window.state.isLoggedIn && window.state.user && String(window.state.user.id) === String(u.id)) {
+                    window.state.user.role = newRole;
+                }
+                window.logActivity(`Mengubah role pengguna ${u.name}`, newRole, 'Hak Akses', 'purple');
+                window.showToast(`Role ${u.name} diubah menjadi ${newRole}`);
+                window.render();
+            }
+        };
+
+        window.toggleUserStatus = function(id) {
+            const user = window.DB.users.find(u => String(u.id) === String(id));
+            if (user && String(user.id) !== String(window.state.user.id)) {
+                user.status = !user.status;
+                if (user.guruId !== undefined) {
+                    const g = window.DB.guru.find(x => String(x.id) === String(user.guruId));
+                    if (g) g.status = user.status;
+                }
+                window.logActivity(`${user.status ? 'Mengaktifkan' : 'Menonaktifkan'} pengguna`, user.name, 'Pengguna', user.status ? 'green' : 'red');
+                window.showToast(`Akun ${user.name} ${user.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
+                window.render();
+            }
+        };
+
+        window.getFilteredUsersForTable = function() {
+            window.syncUsersWithGuru();
+            const q = window.state.searchQueryUser;
+            return window.DB.users.filter(u => {
+                if (!q) return true;
+                const nameMatch = u.name && u.name.toLowerCase().includes(q);
+                const roleMatch = u.role && u.role.toLowerCase().includes(q);
+                const emailMatch = u.email && u.email.toLowerCase().includes(q);
+                return nameMatch || roleMatch || emailMatch;
+            });
+        };
+
+        window.triggerUserSearch = function(val) { window.state.searchQueryUser = val.toLowerCase(); window.render(); };
+        window.renderAdminUsers = function() {
+            const isEditMode = window.state.isUsersTableEditable;
+            const filteredUsers = window.getFilteredUsersForTable();
+            const availableApps = Array.isArray(window.DB.apps) ? window.DB.apps : [];
+
+            // Kolom Header Dinamis untuk Setiap Aplikasi (Dilengkapi Checkbox "Semua")
+            const appsHeaderHtml = availableApps.map(app => {
+                const isAllChecked = filteredUsers.length > 0 && filteredUsers.every(u => Array.isArray(u.adminApps) && u.adminApps.includes(app.id));
+                return `
+                    <th class="py-2.5 px-3 text-center border-r border-slate-200 bg-[#eff6ff] min-w-[130px]">
+                        <div class="flex flex-col items-center justify-center gap-1.5 py-1">
+                            <div class="flex items-center gap-1.5 font-bold text-[11px] text-brand-navy">
+                                <div class="w-5 h-5 rounded-md ${app.bg} flex items-center justify-center shrink-0 border border-white">
+                                    <i data-lucide="${app.icon}" class="w-3 h-3 ${app.color}"></i>
+                                </div>
+                                <span class="truncate max-w-[95px]" title="${app.name}">${app.name}</span>
+                            </div>
+                            <label class="inline-flex items-center gap-1.5 text-[9.5px] font-extrabold text-blue-700 bg-white border border-blue-200 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-50 shadow-xs transition-colors" title="Centang / Batal Semua Pengguna untuk Aplikasi Ini">
+                                <input type="checkbox" ${isAllChecked ? 'checked' : ''} ${!isEditMode ? 'disabled' : ''} onchange="toggleCheckAllAppAdmin('${app.id}', this.checked)" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer ${!isEditMode ? 'opacity-50 cursor-not-allowed' : ''}">
+                                <span>Semua</span>
+                            </label>
+                        </div>
+                    </th>
+                `;
+            }).join('');
+
+            // Baris Pengguna Langsung dalam Tabel (Tanpa Menu Aksi / Popup Per Orang)
+            const trs = filteredUsers.map((u, idx) => {
+                const pwd = u.password || DEFAULT_PASSWORD;
+                const isDefaultPwd = pwd === DEFAULT_PASSWORD;
+                const userAdminApps = Array.isArray(u.adminApps) ? u.adminApps : [];
+
+                // Checkbox Centang Per Aplikasi Langsung di Sel Baris
+                const appCellsHtml = availableApps.map(app => {
+                    const isAssigned = userAdminApps.includes(app.id);
+                    return `
+                        <td class="py-2.5 px-3 text-center border-r border-slate-100 bg-white hover:bg-blue-50/40 transition-colors">
+                            <input type="checkbox" ${isAssigned ? 'checked' : ''} ${!isEditMode ? 'disabled' : ''} onchange="toggleUserAppAdmin('${u.id}', '${app.id}', this.checked)" class="w-4 h-4 accent-blue-600 cursor-pointer ${!isEditMode ? 'opacity-50 cursor-not-allowed' : 'hover:scale-125 transition-transform'}" title="${isEditMode ? `${u.name} sebagai Admin ${app.name}` : 'Aktifkan Mode Edit untuk mencentang'}">
+                        </td>
+                    `;
+                }).join('');
+
+                const roleOptions = ['Super Admin', 'Admin', 'Pegawai', 'Warid'].map(r => 
+                    `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`
+                ).join('');
+
+                return `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors bg-white">
+                    <td class="py-3 px-3 whitespace-nowrap text-center text-[11px] font-bold text-brand-muted w-[50px] min-w-[50px] sticky-col-1" style="position: sticky; left: 0; z-index: 25; background-color: #ffffff;">
+                        ${idx + 1}
+                    </td>
+                    <td class="py-3 px-3 whitespace-nowrap sticky-col-2" style="position: sticky; left: 50px; z-index: 25; background-color: #ffffff; border-right: 1px solid #cbd5e1; box-shadow: 4px 0 8px -2px rgba(0,0,0,0.06); min-w-[210px]; max-w-[240px];">
+                        <div class="flex items-center gap-2.5">
+                            <img src="${u.avatar || window.getUserAvatarUrl(u.name)}" class="w-8 h-8 rounded-full border border-white shadow-xs shrink-0">
+                            <div class="min-w-0 flex-1">
+                                <div class="font-bold text-[12.5px] text-brand-navy truncate">${u.name}</div>
+                                <div class="text-[9.5px] text-brand-muted truncate">${u.email || window.makeEmailFromName(u.name)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 whitespace-nowrap text-center">
+                        <span class="font-mono text-[10.5px] font-bold px-2 py-0.5 rounded border ${isDefaultPwd ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">${pwd}</span>
+                    </td>
+                    <td class="py-3 px-3 whitespace-nowrap text-center">
+                        ${isEditMode ? `
+                            <select onchange="changeUserRole('${u.id}', this.value)" class="input-glass py-1 text-[11px] font-bold cursor-pointer w-auto mx-auto">
+                                ${roleOptions}
+                            </select>
+                        ` : `
+                            <span class="text-[10.5px] font-bold px-2 py-0.5 ${u.role === 'Super Admin' ? 'bg-orange-100 text-orange-600' : (u.role === 'Admin' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-50 text-blue-600')} rounded-md border border-white/50 whitespace-nowrap">${u.role}</span>
+                        `}
+                    </td>
+                    <td class="py-3 px-3 whitespace-nowrap text-center border-r border-slate-200">
+                        ${isEditMode ? `
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" ${u.status !== false ? 'checked' : ''} onchange="toggleUserStatus('${u.id}')">
+                                <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        ` : `
+                            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${u.status !== false ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'} text-[10px] font-bold">
+                                <div class="w-1.5 h-1.5 rounded-full ${u.status !== false ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                <span>${u.status !== false ? 'Aktif' : 'Off'}</span>
+                            </div>
+                        `}
+                    </td>
+                    ${appCellsHtml}
+                </tr>`;
+            }).join('');
+
+            return `
+            <div class="p-4 md:p-6 w-full h-full flex flex-col box-border relative">
+                <div class="glass-panel p-4 rounded-[20px] flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-3 shrink-0">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-[18px] font-extrabold text-brand-navy">Hak Akses Portal & Matriks Admin Aplikasi</h1>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${isEditMode ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 animate-pulse' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                ${isEditMode ? 'Mode Edit Aktif' : 'Terkunci'}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-brand-muted mt-0.5">Centang langsung di tabel untuk mendelegasikan hak admin aplikasi, atau gunakan centang 'Semua' pada judul kolom untuk mendelegasikan ke seluruh akun sekaligus.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="relative w-full sm:w-[190px]">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i>
+                            <input type="text" oninput="triggerUserSearch(this.value)" placeholder="Cari nama / email..." value="${window.state.searchQueryUser}" class="input-glass pl-8 py-1.5">
+                        </div>
+                        <button onclick="toggleUsersTableEditMode()" class="px-3.5 py-2 rounded-xl text-[11.5px] font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition-all ${isEditMode ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25 ring-2 ring-emerald-300' : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25'}">
+                            <i data-lucide="${isEditMode ? 'unlock' : 'lock'}" class="w-3.5 h-3.5"></i>
+                            <span>${isEditMode ? 'Editing Aktif (Kunci)' : 'Terkunci (Buka Edit)'}</span>
+                        </button>
+                        <button onclick="showAddUserModal()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5">
+                            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah Akun
+                        </button>
+                        <button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-3.5 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5">
+                            <i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full relative z-10 shadow-sm border border-white">
+                    <div class="overflow-x-auto overflow-y-auto slider-scroll flex-1 w-full bg-white">
+                        <table class="w-full text-left border-collapse min-w-[1100px]">
+                            <thead>
+                                <tr>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center w-[50px] min-w-[50px] sticky-col-1-header" style="position: sticky; top: 0; left: 0; z-index: 50; background-color: #e2e8f0; border-right: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">NO</th>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-col-2-header" style="position: sticky; top: 0; left: 50px; z-index: 50; background-color: #e2e8f0; border-right: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1; box-shadow: 4px 0 8px -2px rgba(0,0,0,0.06); min-w-[210px]; max-w-[240px];">PENGGUNA & EMAIL</th>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fef3c7]">PASSWORD</th>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">ROLE PORTAL</th>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9] border-r border-slate-300">STATUS</th>
+                                    ${appsHeaderHtml}
+                                </tr>
+                            </thead>
+                            <tbody>${trs}</tbody>
+                        </table>
+                        ${filteredUsers.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada pengguna ditemukan.</div>' : ''}
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        window.handleSelectGuruForUser = function(guruId) {
+            if (!guruId) return;
+            const g = window.DB.guru.find(x => String(x.id) === String(guruId));
+            if (!g) return;
+            const nameInput = document.getElementById('modalUserName');
+            const emailInput = document.getElementById('modalUserEmail');
+            const passInput = document.getElementById('modalUserPassword');
+            const roleSelect = document.getElementById('modalUserRole');
+            const statusSelect = document.getElementById('modalUserStatus');
+
+            const existingUser = window.DB.users.find(u =>
+                (u.guruId !== undefined && String(u.guruId) === String(g.id)) ||
+                (u.name && String(u.name).trim().toLowerCase() === String(g.nama).trim().toLowerCase())
+            );
+
+            if (nameInput) nameInput.value = g.nama || '';
+            if (emailInput) emailInput.value = (existingUser && existingUser.email) ? existingUser.email : window.makeEmailFromName(g.nama);
+            if (passInput) passInput.value = (existingUser && existingUser.password) ? existingUser.password : (g.password || DEFAULT_PASSWORD);
+            if (roleSelect) roleSelect.value = (existingUser && existingUser.role) ? existingUser.role : 'Pegawai';
+            if (statusSelect) statusSelect.value = (existingUser ? existingUser.status !== false : g.status !== false) ? 'true' : 'false';
+
+            const activeAdminApps = (existingUser && Array.isArray(existingUser.adminApps)) ? existingUser.adminApps : [];
+            document.querySelectorAll('input[name="modalUserAdminApps"]').forEach(cb => {
+                cb.checked = activeAdminApps.includes(cb.value);
+            });
+        };
+
+        window.buildUserModalFormHtml = function(userObj) {
+            window.syncUsersWithGuru();
+            const isEdit = Boolean(userObj);
+            const u = userObj || {
+                id: null,
+                guruId: '',
+                name: '',
+                email: '',
+                password: DEFAULT_PASSWORD,
+                role: 'Pegawai',
+                status: true,
+                adminApps: []
+            };
+
+            const roles = ['Super Admin', 'Admin', 'Pegawai', 'Warid'];
+            const roleOptions = roles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`).join('');
+
+            const guruOptions = `<option value="">-- Input Manual / Pilih Pegawai dari Buku Induk --</option>` +
+                window.DB.guru.map(g => {
+                    const isSelected = (u.guruId !== undefined && String(u.guruId) === String(g.id)) ||
+                                       (u.name && g.nama && u.name.trim().toLowerCase() === g.nama.trim().toLowerCase());
+                    return `<option value="${g.id}" ${isSelected ? 'selected' : ''}>${g.nama} ${g.namaGelar || ''} (NIK: ${g.nik || '-'})</option>`;
+                }).join('');
+
+            const selectedAdminApps = Array.isArray(u.adminApps) ? u.adminApps : [];
+            const appsCheckboxesHtml = window.DB.apps.map(app => {
+                const checked = selectedAdminApps.includes(app.id) ? 'checked' : '';
+                const roleLabel = Array.isArray(app.roles) ? app.roles.join(', ') : 'Umum';
+                return `
+                    <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/80 hover:bg-white border border-slate-200 cursor-pointer transition-all shadow-sm">
+                        <input type="checkbox" name="modalUserAdminApps" value="${app.id}" ${checked} class="w-4 h-4 cursor-pointer accent-blue-600 shrink-0">
+                        <div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white">
+                            <i data-lucide="${app.icon}" class="w-3.5 h-3.5 ${app.color}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[11.5px] font-bold text-brand-navy truncate leading-tight">${app.name}</div>
+                            <div class="text-[9.5px] text-brand-muted truncate">${app.cat} • Akses: ${roleLabel}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+
+            return `
+                <div class="mb-3 border-b border-gray-200 pb-3">
+                    <h2 class="text-lg font-extrabold text-brand-navy">${isEdit ? 'Edit Hak Akses Pengguna' : 'Tambah / Atur Hak Akses Pengguna'}</h2>
+                    <p class="text-[11px] text-brand-muted">Atur profil login, role utama portal, dan delegasi hak akses sebagai Admin per Aplikasi.</p>
+                </div>
+                <form onsubmit="saveUserFormModal(event, ${isEdit ? `'${u.id}'` : 'null'})" class="flex flex-col gap-3 max-h-[68vh] overflow-y-auto slider-scroll p-1 pr-2">
+                    <div class="flex flex-col gap-1 bg-blue-50/70 p-3 rounded-xl border border-blue-200/70">
+                        <label class="text-[10px] font-extrabold text-brand-blue uppercase">1. Pilih dari Daftar Pegawai (Otomatis Isi Nama & Password)</label>
+                        <select id="modalUserGuruSelect" onchange="handleSelectGuruForUser(this.value)" class="input-glass font-bold text-brand-navy cursor-pointer py-2">
+                            ${guruOptions}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">2. Nama Lengkap *</label>
+                            <input type="text" id="modalUserName" required value="${u.name || ''}" placeholder="Nama Lengkap" class="input-glass py-2 font-semibold">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">3. Alamat Email *</label>
+                            <input type="email" id="modalUserEmail" required value="${u.email || ''}" placeholder="nama@alka.co.id" class="input-glass py-2">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">4. Password Login *</label>
+                            <input type="text" id="modalUserPassword" required value="${u.password || DEFAULT_PASSWORD}" placeholder="Default: 123456" class="input-glass py-2 font-mono font-bold">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">5. Role Utama Portal</label>
+                            <select id="modalUserRole" class="input-glass py-2 font-bold cursor-pointer">${roleOptions}</select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">6. Status Akun</label>
+                            <select id="modalUserStatus" class="input-glass py-2 font-bold cursor-pointer">
+                                <option value="true" ${u.status !== false ? 'selected' : ''}>Aktif</option>
+                                <option value="false" ${u.status === false ? 'selected' : ''}>Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/70 flex flex-col gap-2 mt-1">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10.5px] font-extrabold text-indigo-900 uppercase flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                7. Hak Akses sebagai Admin Aplikasi (Delegasi Khusus)
+                            </label>
+                            <span class="text-[9.5px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100">${window.DB.apps.length} Aplikasi Tersedia</span>
+                        </div>
+                        <p class="text-[10px] text-brand-muted leading-tight">
+                            Centang aplikasi di bawah ini jika pengguna ini diberi wewenang sebagai <strong>Admin Aplikasi</strong> tersebut (otomatis membuka akses aplikasi khusus Admin seperti SarprasQ & membuka menu Portal Admin di dalam iframe aplikasi).
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                            ${appsCheckboxesHtml}
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600 flex items-center gap-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i> Simpan Hak Akses
+                        </button>
+                    </div>
+                </form>
+            `;
+        };
+
+        window.showAddUserModal = function() {
+            window.openModal(window.buildUserModalFormHtml(null));
+        };
+
+        window.showEditUserModal = function(id) {
+            const user = window.DB.users.find(u => String(u.id) === String(id));
+            if (!user) return;
+            window.openModal(window.buildUserModalFormHtml(user));
+        };
+
+        window.saveUserFormModal = function(event, editId) {
+            event.preventDefault();
+            const guruIdVal = document.getElementById('modalUserGuruSelect').value;
+            const name = document.getElementById('modalUserName').value.trim();
+            const email = document.getElementById('modalUserEmail').value.trim() || window.makeEmailFromName(name);
+            const password = document.getElementById('modalUserPassword').value.trim() || DEFAULT_PASSWORD;
+            const role = document.getElementById('modalUserRole').value;
+            const status = document.getElementById('modalUserStatus').value === 'true';
+
+            const checkedAdminApps = Array.from(document.querySelectorAll('input[name="modalUserAdminApps"]:checked')).map(cb => cb.value);
+
+            let targetUser = null;
+            if (editId !== null && editId !== undefined) {
+                targetUser = window.DB.users.find(u => String(u.id) === String(editId));
+            }
+            if (!targetUser && guruIdVal) {
+                targetUser = window.DB.users.find(u => String(u.guruId) === String(guruIdVal));
+            }
+            if (!targetUser) {
+                targetUser = window.DB.users.find(u => u.name && u.name.trim().toLowerCase() === name.toLowerCase());
+            }
+
+            if (targetUser) {
+                targetUser.name = name;
+                targetUser.email = email;
+                targetUser.password = password;
+                targetUser.role = role;
+                targetUser.status = status;
+                targetUser.adminApps = checkedAdminApps;
+                if (guruIdVal) targetUser.guruId = Number(guruIdVal) || guruIdVal;
+                window.logActivity('Memperbarui hak akses pengguna', name, 'Pengguna', 'purple');
+                window.showToast(`Hak akses ${name} berhasil diperbarui!`);
+            } else {
+                targetUser = {
+                    id: Date.now(),
+                    guruId: guruIdVal ? (Number(guruIdVal) || guruIdVal) : undefined,
+                    name: name,
+                    email: email,
+                    role: role,
+                    password: password,
+                    status: status,
+                    lastLogin: 'Belum pernah',
+                    adminApps: checkedAdminApps
+                };
+                window.DB.users.unshift(targetUser);
+                window.logActivity('Menambahkan pengguna baru', name, 'Pengguna', 'blue');
+                window.showToast(`Pengguna ${name} berhasil ditambahkan!`);
+            }
+
+            // Sinkronkan juga ke Data Pegawai (window.DB.guru) jika terhubung
+            const linkedGuru = window.DB.guru.find(g =>
+                (targetUser.guruId !== undefined && String(g.id) === String(targetUser.guruId)) ||
+                (g.nama && g.nama.trim().toLowerCase() === name.toLowerCase())
+            );
+            if (linkedGuru) {
+                linkedGuru.nama = name;
+                linkedGuru.password = password;
+                linkedGuru.status = status;
+                linkedGuru.adminApps = [...checkedAdminApps];
+            }
+
+            // Jika yang diedit adalah user yang sedang login saat ini, perbarui sesi aktifnya
+            if (window.state.isLoggedIn && window.state.user &&
+                (String(window.state.user.id) === String(targetUser.id) ||
+                 window.state.user.name.trim().toLowerCase() === targetUser.name.trim().toLowerCase())) {
+                window.state.user.name = targetUser.name;
+                window.state.user.role = targetUser.role;
+                window.state.user.adminApps = [...checkedAdminApps];
+            }
+
+            window.closeModal();
+            window.render();
+        };
+
+        window.navigate = function(hash) {
+            window.closeAllPopups();
+            window.location.hash = hash;
+            window.state.path = hash;
+            window.state.zoom = 1.0;
+            if (hash === '#apps' || hash === '#edukasi') {
+                window.state.slider2Minimized = false;
+            }
+            window.render();
+        };
         window.addEventListener('hashchange', () => { if(window.location.hash !== window.state.path) { window.state.path = window.location.hash || '#home'; window.render(); } });
         window.togglePopup = function(id, e) { if(e) e.stopPropagation(); window.closeAllPopups(); const el = document.getElementById(id); if(el) { el.classList.toggle('show'); if(id.startsWith('notif')) window.renderNotifItems(); } };
         window.switchNotifTab = function(tab, e) { if(e) e.stopPropagation(); window.state.notifTab = tab; window.renderNotifItems(); };
@@ -954,36 +1903,75 @@
             if (!query || query.trim() === '') { dropdown.classList.add('hidden'); return; }
             dropdown.classList.remove('hidden');
             const q = query.toLowerCase();
-            const results = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn ? a.roles.includes('Umum') : (a.roles.includes('Umum') || a.roles.includes(window.state.user.role))) && (a.name.toLowerCase().includes(q) || a.cat.toLowerCase().includes(q)));
+            const results = window.DB.apps.filter(a => window.canUserSeeApp(a) && (a.name.toLowerCase().includes(q) || a.cat.toLowerCase().includes(q)));
             if (results.length === 0) {
                 resultsContainer.innerHTML = `<div class="p-4 text-center text-[12px] text-brand-muted">Tidak ada hasil.</div>`;
                 return;
             }
             let html = '';
             results.forEach(app => {
-                html += `<div onclick="navigate('#app-${app.id}')" class="p-3 hover:bg-white/60 cursor-pointer flex items-center gap-3 border-b border-white/20 last:border-0"><div class="w-8 h-8 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div><div><p class="text-[13px] font-bold text-brand-navy mb-0.5">${app.name}</p><p class="text-[10px] text-brand-muted">${app.cat}</p></div></div>`;
+                html += `<div onclick="selectAppFromSlider2('${app.id}')" class="p-3 hover:bg-white/60 cursor-pointer flex items-center gap-3 border-b border-white/20 last:border-0"><div class="w-8 h-8 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div><div><p class="text-[13px] font-bold text-brand-navy mb-0.5">${app.name}</p><p class="text-[10px] text-brand-muted">${app.cat}</p></div></div>`;
             });
             resultsContainer.innerHTML = html;
             if (window.lucide) lucide.createIcons();
         };
 
         // ============================================================================
-        // DUAL-BRIDGE SSO AUTO-LOGIN ENGINE FOR IFRAME APPS
+        // DUAL-BRIDGE SSO AUTO-LOGIN ENGINE FOR IFRAME APPS (DENGAN DELEGASI ADMIN)
         // ============================================================================
-        window.getAlkaSsoPayload = function() {
+        window.resolveActiveIframeAppId = function(rawUrl) {
+            if (window.state.path && window.state.path.startsWith('#app-')) {
+                return window.state.path.replace('#app-', '');
+            }
+            const targetUrl = rawUrl || '';
+            if (targetUrl && Array.isArray(window.DB.apps)) {
+                const cleanTarget = targetUrl.split('?')[0].replace(/\/+$/, '').toLowerCase();
+                const matchedApp = window.DB.apps.find(a => {
+                    if (!a.url) return false;
+                    const cleanAppUrl = a.url.split('?')[0].replace(/\/+$/, '').toLowerCase();
+                    return cleanAppUrl === cleanTarget;
+                });
+                if (matchedApp) return matchedApp.id;
+            }
+            if (window.state.path && Array.isArray(window.DB.menus)) {
+                const activeMenu = window.DB.menus.find(m => m.hash === window.state.path && m.type === 'iframe');
+                if (activeMenu && activeMenu.url && Array.isArray(window.DB.apps)) {
+                    const cleanMenuUrl = activeMenu.url.split('?')[0].replace(/\/+$/, '').toLowerCase();
+                    const matchedApp = window.DB.apps.find(a => {
+                        if (!a.url) return false;
+                        const cleanAppUrl = a.url.split('?')[0].replace(/\/+$/, '').toLowerCase();
+                        return cleanAppUrl === cleanMenuUrl;
+                    });
+                    if (matchedApp) return matchedApp.id;
+                }
+            }
+            return null;
+        };
+
+        window.getAlkaSsoPayload = function(rawUrl) {
             const isLoggedIn = Boolean(window.state.isLoggedIn);
-            const userObj = isLoggedIn && window.state.user ? window.state.user : { id: 0, name: 'Tamu', role: 'Tamu', avatar: '' };
-            const isAdmin = isLoggedIn && (userObj.role === 'Super Admin' || userObj.role === 'Admin');
+            const userObj = isLoggedIn && window.state.user ? window.state.user : { id: 0, name: 'Tamu', role: 'Tamu', avatar: '', adminApps: [] };
+            const userAdminApps = isLoggedIn && Array.isArray(userObj.adminApps) ? userObj.adminApps : [];
+            const currentAppId = window.resolveActiveIframeAppId(rawUrl);
+
+            const isPortalAdmin = isLoggedIn && (userObj.role === 'Super Admin' || userObj.role === 'Admin');
+            const isDelegatedAppAdmin = Boolean(isLoggedIn && currentAppId && userAdminApps.includes(currentAppId));
+            const isAdmin = Boolean(isPortalAdmin || isDelegatedAppAdmin);
+
             return {
                 type: 'ALKA_SSO_AUTH',
                 source: 'MY_ALKA_PORTAL',
                 isLoggedIn: isLoggedIn,
                 isAdmin: isAdmin,
+                appId: currentAppId || '',
+                adminApps: userAdminApps,
                 role: isLoggedIn ? userObj.role : 'Tamu',
                 user: {
                     id: userObj.id || 0,
                     name: userObj.name || 'Tamu',
                     role: isLoggedIn ? userObj.role : 'Tamu',
+                    isAdmin: isAdmin,
+                    adminApps: userAdminApps,
                     avatar: isLoggedIn ? (userObj.avatar || window.getUserAvatarUrl(userObj.name)) : ''
                 },
                 timestamp: Date.now()
@@ -993,13 +1981,16 @@
         window.buildSsoIframeUrl = function(rawUrl) {
             if (!rawUrl) return '';
             try {
-                const payload = window.getAlkaSsoPayload();
+                const payload = window.getAlkaSsoPayload(rawUrl);
                 const parsedUrl = new URL(rawUrl, window.location.href);
                 parsedUrl.searchParams.set('alka_sso', '1');
                 parsedUrl.searchParams.set('alka_logged_in', payload.isLoggedIn ? '1' : '0');
                 parsedUrl.searchParams.set('alka_is_admin', payload.isAdmin ? '1' : '0');
                 parsedUrl.searchParams.set('alka_role', payload.role);
                 parsedUrl.searchParams.set('alka_user', payload.user.name);
+                if (payload.adminApps && payload.adminApps.length > 0) {
+                    parsedUrl.searchParams.set('alka_admin_apps', payload.adminApps.join(','));
+                }
                 return parsedUrl.toString();
             } catch (err) {
                 return rawUrl;
@@ -1009,7 +2000,8 @@
         window.broadcastSsoToIframe = function(iframeEl) {
             const targetIframe = iframeEl || document.getElementById('alka-main-iframe');
             if (!targetIframe || !targetIframe.contentWindow) return;
-            const payload = window.getAlkaSsoPayload();
+            const rawUrl = targetIframe.getAttribute('data-raw-url') || targetIframe.src || '';
+            const payload = window.getAlkaSsoPayload(rawUrl);
             try {
                 targetIframe.contentWindow.postMessage(payload, '*');
             } catch (err) {}
@@ -1028,6 +2020,7 @@
             window.state.isLoggedIn = false;
             window.state.forcePasswordChange = false;
             window.state.pendingLoginAccount = null;
+            window.saveSessionToStorage();
             window.showToast('Anda telah keluar dari sesi.', 'log-out', 'text-orange-500');
             window.navigate('#home');
         };
@@ -1050,16 +2043,22 @@
             let sourceType = null;
             let role = 'Umum';
             let displayName = '';
+            let adminApps = [];
 
             const foundUser = window.DB.users.find(u =>
                 (u.name && u.name.toLowerCase() === q) ||
                 (u.email && u.email.toLowerCase() === q)
             );
             if (foundUser) {
+                if (foundUser.status === false) {
+                    window.showToast('Akun Anda sedang dinonaktifkan oleh Admin!', 'ban', 'text-red-500');
+                    return;
+                }
                 matchedRecord = foundUser;
                 sourceType = 'users';
-                role = foundUser.role || 'Admin';
+                role = foundUser.role || 'Pegawai';
                 displayName = foundUser.name;
+                adminApps = Array.isArray(foundUser.adminApps) ? [...foundUser.adminApps] : [];
             }
 
             if (!matchedRecord) {
@@ -1069,10 +2068,21 @@
                     (g.nbm && String(g.nbm).trim() === rawIdentifier)
                 );
                 if (foundGuru) {
+                    const linkedUser = window.DB.users.find(u =>
+                        (u.guruId !== undefined && String(u.guruId) === String(foundGuru.id)) ||
+                        (u.name && foundGuru.nama && u.name.trim().toLowerCase() === foundGuru.nama.trim().toLowerCase())
+                    );
+                    if (linkedUser && linkedUser.status === false) {
+                        window.showToast('Akun Anda sedang dinonaktifkan oleh Admin!', 'ban', 'text-red-500');
+                        return;
+                    }
                     matchedRecord = foundGuru;
                     sourceType = 'guru';
-                    role = 'Pegawai';
+                    role = (linkedUser && linkedUser.role) ? linkedUser.role : 'Pegawai';
                     displayName = foundGuru.nama;
+                    adminApps = (linkedUser && Array.isArray(linkedUser.adminApps))
+                        ? [...linkedUser.adminApps]
+                        : (Array.isArray(foundGuru.adminApps) ? [...foundGuru.adminApps] : []);
                 }
             }
 
@@ -1088,6 +2098,7 @@
                     sourceType = 'siswa';
                     role = 'Warid';
                     displayName = foundSiswa.nama_siswa;
+                    adminApps = [];
                 }
             }
 
@@ -1107,6 +2118,7 @@
                 name: displayName,
                 role: role,
                 sourceType: sourceType,
+                adminApps: adminApps,
                 avatar: matchedRecord.avatar || window.getUserAvatarUrl(displayName)
             };
 
@@ -1125,6 +2137,16 @@
             window.state.isLoggedIn = true;
             window.state.forcePasswordChange = false;
             window.state.pendingLoginAccount = null;
+            window.saveSessionToStorage();
+
+            const linkedUser = window.DB.users.find(u =>
+                String(u.id) === String(accountSession.id) ||
+                (u.name && u.name.trim().toLowerCase() === accountSession.name.trim().toLowerCase())
+            );
+            if (linkedUser) {
+                linkedUser.lastLogin = 'Baru saja';
+            }
+
             window.showToast(`Assalamualaikum, selamat datang ${accountSession.name}!`, 'check-circle', 'text-green-500');
             window.navigate('#home');
         };
@@ -1180,17 +2202,21 @@
             const pending = window.state.pendingLoginAccount;
             if (!pending) return;
 
-            let targetRecord = null;
             if (pending.sourceType === 'guru') {
-                targetRecord = window.DB.guru.find(g => String(g.id) === String(pending.id));
+                const g = window.DB.guru.find(x => String(x.id) === String(pending.id));
+                if (g) g.password = newPass;
+                const u = window.DB.users.find(x => String(x.guruId) === String(pending.id) || (x.name && x.name.toLowerCase() === pending.name.toLowerCase()));
+                if (u) u.password = newPass;
             } else if (pending.sourceType === 'siswa') {
-                targetRecord = window.DB.siswa.find(s => String(s.id) === String(pending.id));
+                const s = window.DB.siswa.find(x => String(x.id) === String(pending.id));
+                if (s) s.password = newPass;
             } else if (pending.sourceType === 'users') {
-                targetRecord = window.DB.users.find(u => String(u.id) === String(pending.id));
-            }
-
-            if (targetRecord) {
-                targetRecord.password = newPass;
+                const u = window.DB.users.find(x => String(x.id) === String(pending.id));
+                if (u) {
+                    u.password = newPass;
+                    const g = window.DB.guru.find(x => (u.guruId && String(x.id) === String(u.guruId)) || (x.nama && x.nama.toLowerCase() === u.name.toLowerCase()));
+                    if (g) g.password = newPass;
+                }
             }
 
             window.state.forcePasswordChange = false;
@@ -1212,13 +2238,26 @@
                 return;
             }
             const cur = window.state.user;
-            let rec = null;
-            if (cur.sourceType === 'guru') rec = window.DB.guru.find(g => String(g.id) === String(cur.id));
-            else if (cur.sourceType === 'siswa') rec = window.DB.siswa.find(s => String(s.id) === String(cur.id));
-            else rec = window.DB.users.find(u => String(u.id) === String(cur.id));
+            let updated = false;
+            if (cur.sourceType === 'guru') {
+                const g = window.DB.guru.find(x => String(x.id) === String(cur.id));
+                if (g) { g.password = newPass; updated = true; }
+                const u = window.DB.users.find(x => String(x.guruId) === String(cur.id) || (x.name && x.name.toLowerCase() === cur.name.toLowerCase()));
+                if (u) { u.password = newPass; updated = true; }
+            } else if (cur.sourceType === 'siswa') {
+                const s = window.DB.siswa.find(x => String(x.id) === String(cur.id));
+                if (s) { s.password = newPass; updated = true; }
+            } else {
+                const u = window.DB.users.find(x => String(x.id) === String(cur.id));
+                if (u) {
+                    u.password = newPass;
+                    updated = true;
+                    const g = window.DB.guru.find(x => (u.guruId && String(x.id) === String(u.guruId)) || (x.nama && x.nama.toLowerCase() === u.name.toLowerCase()));
+                    if (g) g.password = newPass;
+                }
+            }
 
-            if (rec) {
-                rec.password = newPass;
+            if (updated) {
                 window.logActivity('Mengubah password melalui Profil Saya', cur.name, cur.role, 'blue');
                 await window.globalSave();
                 window.showToast('Password Anda berhasil diperbarui di Supabase!', 'check-circle', 'text-green-500');
@@ -1273,13 +2312,19 @@
             return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[280px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/60"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/30"><span class="font-extrabold text-[13px] text-brand-navy">Notifikasi</span>${unreadCount > 0 ? `<span class="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">${unreadCount} Baru</span>` : ''}</div><div class="flex border-b border-white/30 bg-white/40 p-1"><button id="tab-semua" onclick="switchNotifTab('semua', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button id="tab-belum" onclick="switchNotifTab('belum_dibaca', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum Dibaca</button></div><div id="notif-items-container" class="p-2 flex flex-col gap-1 max-h-[280px] overflow-y-auto slider-scroll bg-white/20"></div></div>`;
         };
 
+        // ============================================================================
+        // POPUP PROFIL (HANYA 1 TOMBOL PINTASAN PANEL ADMIN)
+        // ============================================================================
         window.getProfilePopupHtml = function(idSuffix) {
             const userName = window.state.isLoggedIn ? window.state.user.name : 'Assalamualaikum';
             const userRole = window.state.isLoggedIn ? window.state.user.role : 'SDIT Al Kautsar';
             const userAvatar = window.state.isLoggedIn ? (window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)) : '';
-            const adminBtn = (window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin')) ? `<button onclick="navigate('#admin-dashboard')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-50 rounded-xl flex items-center gap-2.5 mt-1 border border-blue-200 bg-white"><i data-lucide="shield-alert" class="w-[18px] h-[18px]"></i> Panel Admin</button>` : '';
+            const isAdminUser = window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin');
+            const adminBtn = isAdminUser ? `
+                <button onclick="navigate('#admin-dashboard')" class="w-full text-left px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-50 rounded-xl flex items-center gap-2.5 mt-1 border border-blue-200 bg-white"><i data-lucide="shield-alert" class="w-[18px] h-[18px]"></i> Panel Admin</button>
+            ` : '';
             
-            return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[220px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50">
+            return `<div id="profile-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'left-0 origin-top-left top-[calc(100%+8px)]' : 'right-0 origin-top-right top-[calc(100%+12px)]'} w-[235px] glass-panel rounded-[24px] p-2 flex flex-col shadow-2xl border border-white/60 bg-white/40 z-50">
                 <div class="px-3 py-3 flex items-center gap-3 border-b border-white/40 mb-1 bg-white/30 rounded-t-[16px]">
                     <div class="w-10 h-10 rounded-full border-2 border-white bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
                         ${window.state.isLoggedIn ? `<img src="${userAvatar}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}
@@ -1327,6 +2372,12 @@
                 if (!window.state.isLoggedIn) { window.navigate('#login'); return ''; }
                 const u = window.state.user;
                 const avatarUrl = u.avatar || window.getUserAvatarUrl(u.name);
+                const delegatedAppsBadges = (Array.isArray(u.adminApps) && u.adminApps.length > 0)
+                    ? `<div class="mt-3 flex flex-wrap justify-center gap-1.5">` + u.adminApps.map(appId => {
+                        const foundApp = window.DB.apps.find(a => a.id === appId);
+                        return foundApp ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">Admin ${foundApp.name}</span>` : '';
+                    }).join('') + `</div>`
+                    : '';
                 return `
                 <div class="w-full h-full flex items-center justify-center p-5 animate-fade overflow-y-auto">
                     <div class="glass-panel w-full max-w-[420px] p-7 rounded-[32px] text-center">
@@ -1335,6 +2386,7 @@
                         </div>
                         <h2 class="text-xl font-extrabold text-brand-navy">${u.name}</h2>
                         <span class="inline-block mt-1 px-3 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-600 border border-white">${u.role}</span>
+                        ${delegatedAppsBadges}
                         <form onsubmit="saveProfilePassword(event)" class="mt-6 pt-5 border-t border-white/50 text-left flex flex-col gap-3">
                             <label class="text-[11px] font-extrabold text-brand-navy uppercase flex items-center gap-1.5"><i data-lucide="key-round" class="w-3.5 h-3.5 text-brand-blue"></i> Ganti Password Akun</label>
                             <input type="password" id="profileNewPass" required minlength="4" placeholder="Masukkan password baru..." class="input-glass py-2.5 px-3 text-[13px]">
@@ -1345,9 +2397,120 @@
                 </div>`;
             }
             
+            // ============================================================================
+            // MOBILE M-BANKING PORTAL HOME DASHBOARD (#home di layar HP)
+            // ============================================================================
+            if (path === '#home' && window.innerWidth < 768) {
+                const u = window.state.user;
+                const isLogged = window.state.isLoggedIn;
+                const displayName = isLogged ? u.name : 'Tamu Pengunjung';
+                const displayRole = isLogged ? u.role : 'SDIT Al Kautsar';
+                const avatarUrl = isLogged ? (u.avatar || window.getUserAvatarUrl(u.name)) : './MyAlka.png';
+                
+                const accessibleApps = window.DB.apps.filter(a => window.canUserSeeApp(a));
+                const mainShortcuts = accessibleApps.slice(0, 8).map(app => `
+                    <div onclick="selectAppFromSlider2('${app.id}')" class="flex flex-col items-center gap-1.5 cursor-pointer active:scale-90 transition-transform text-center group">
+                        <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-[20px] ${app.bg} flex items-center justify-center shadow-sm border border-white group-hover:shadow-md transition-shadow relative">
+                            <i data-lucide="${app.icon}" class="w-6 h-6 ${app.color}"></i>
+                        </div>
+                        <span class="text-[11px] font-bold text-brand-navy leading-tight truncate w-full max-w-[68px]">${app.name}</span>
+                    </div>
+                `).join('');
+
+                return `
+                <div class="w-full h-full flex flex-col px-4 pt-2 pb-6 overflow-y-auto slider-scroll animate-fade">
+                    <!-- KARTU SAMBUTAN M-BANKING -->
+                    <div class="glass-panel rounded-[26px] p-4.5 mb-4 shadow-sm border border-white/80 bg-white/40">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 shrink-0">
+                                    <img src="${avatarUrl}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-[10.5px] font-semibold text-brand-muted leading-none mb-1">Assalamualaikum,</p>
+                                    <h3 class="text-[14.5px] font-extrabold text-brand-navy leading-tight truncate">${displayName} 👋</h3>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold ${isLogged ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600'}">
+                                ${displayRole}
+                            </span>
+                        </div>
+                        <div class="p-2.5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-transparent border border-blue-200/50 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-base">✨</span>
+                                <span class="text-[11px] font-bold text-brand-navy">Portal Integrasi SDIT Al Kautsar</span>
+                            </div>
+                            <button onclick="navigate('#apps')" class="text-[10.5px] font-extrabold text-brand-blue flex items-center gap-0.5 hover:underline">
+                                Semua <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HERO BANNER ALKANEWS (FULLSCREEN 1-KLIK TANPA DOBEL MENU) -->
+                    <div onclick="selectAppFromSlider2('alkautsar')" class="glass-panel rounded-[24px] p-4 mb-4 cursor-pointer hover:bg-white/60 active:scale-[0.98] transition-all bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2 py-0.5 rounded-full bg-white/20 text-[9.5px] font-extrabold uppercase tracking-wider backdrop-blur-md">Berita & Informasi Utama</span>
+                            <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-white"></i>
+                            </div>
+                        </div>
+                        <h4 class="text-[15px] font-black leading-snug mb-1">Alkautsar Islamic News Portal</h4>
+                        <p class="text-[11px] text-blue-100 font-medium leading-relaxed mb-3">
+                            Buka portal berita Alkautsar mode layar penuh (bebas dobel menu & navigasi lega).
+                        </p>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-blue-600 text-[11px] font-extrabold shadow-sm group-hover:scale-105 transition-transform">
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Buka Layar Penuh 🚀
+                        </div>
+                    </div>
+
+                    <!-- GRID PINTASAN APLIKASI (M-BANKING STYLE) -->
+                    <div class="glass-panel rounded-[26px] p-4 mb-4 bg-white/30 border border-white/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3.5 px-1">
+                            <h4 class="text-[12.5px] font-extrabold text-brand-navy flex items-center gap-1.5">
+                                <i data-lucide="layout-grid" class="w-4 h-4 text-brand-blue"></i> Menu Aplikasi Cepat
+                            </h4>
+                            <span class="text-[10px] font-bold text-brand-muted">${accessibleApps.length} Layanan</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-y-3.5 gap-x-2">
+                            ${mainShortcuts}
+                        </div>
+                    </div>
+
+                    <!-- MENU EDUKASI & KARYA -->
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div onclick="navigate('#edukasi')" class="glass-panel rounded-[20px] p-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-white/50 active:scale-95 transition-all">
+                            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0 border border-white">
+                                <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-[11.5px] font-extrabold text-brand-navy leading-tight truncate">Games & Edukasi</div>
+                                <div class="text-[9.5px] text-brand-muted truncate">Karya Siswa Alka</div>
+                            </div>
+                        </div>
+                        <div onclick="navigate('#psb')" class="glass-panel rounded-[20px] p-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-white/50 active:scale-95 transition-all">
+                            <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 border border-white">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-[11.5px] font-extrabold text-brand-navy leading-tight truncate">PSB Datain</div>
+                                <div class="text-[9.5px] text-brand-muted truncate">Pendaftaran Siswa</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
             let currentFilter = path === '#edukasi' ? 'edukasi' : 'apps';
-            const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn ? a.roles.includes('Umum') : (a.roles.includes('Umum') || a.roles.includes(window.state.user.role))) && a.section === currentFilter);
-            let appGridHTML = visibleApps.map(app => `<div onclick="navigate('#app-${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none mb-1 truncate">${app.name}</h4><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`).join('');
+            const visibleApps = window.DB.apps.filter(a => window.canUserSeeApp(a) && a.section === currentFilter);
+            let appGridHTML = visibleApps.map(app => {
+                const isUserAppAdmin = window.state.isLoggedIn && window.state.user && (
+                    window.state.user.role === 'Super Admin' ||
+                    window.state.user.role === 'Admin' ||
+                    (Array.isArray(window.state.user.adminApps) && window.state.user.adminApps.includes(app.id))
+                );
+                return `<div onclick="selectAppFromSlider2('${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><div class="flex items-center gap-1.5 mb-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none truncate">${app.name}</h4>${isUserAppAdmin ? `<span class="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 shrink-0">ADMIN</span>` : ''}</div><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`;
+            }).join('');
 
             return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3 w-16 h-16 rounded-2xl overflow-hidden shadow">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button onclick="navigate('#apps')" class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
         };
@@ -1357,8 +2520,26 @@
             const isDirectApp = window.state.path.startsWith('#app-');
             
             let isIframe = false; let iframeUrl = null; let currentTitle = 'Portal'; let activeAppObj = null;
-            if (activeMenu && activeMenu.type === 'iframe') { isIframe = true; iframeUrl = activeMenu.url; currentTitle = activeMenu.name; } 
-            else if (isDirectApp) { const app = window.DB.apps.find(a => '#app-'+a.id === window.state.path && a.status); if (app) { isIframe = true; iframeUrl = app.url; currentTitle = app.name; activeAppObj = app; } }
+            if (activeMenu && activeMenu.type === 'iframe') {
+                // Di mode HP (Portrait), jika menu yang aktif adalah Beranda (#home),
+                // alihkan ke Native Dashboard Portal agar tidak ada dobel menu!
+                // Di mode Desktop (Landscape), tetap render Iframe AlkaNews secara penuh di samping sidebar.
+                if (isMobile && activeMenu.hash === '#home') {
+                    isIframe = false;
+                } else {
+                    isIframe = true; iframeUrl = activeMenu.url; currentTitle = activeMenu.name;
+                }
+            } else if (isDirectApp) {
+                const targetAppId = window.state.path.replace('#app-', '');
+                const app = window.DB.apps.find(a => String(a.id) === String(targetAppId) && window.canUserSeeApp(a));
+                if (app) {
+                    isIframe = true; iframeUrl = app.url; currentTitle = app.name; activeAppObj = app;
+                } else {
+                    window.showToast('Anda tidak memiliki akses untuk membuka aplikasi ini.', 'lock', 'text-orange-500');
+                    window.state.path = '#apps';
+                    window.location.hash = '#apps';
+                }
+            }
 
             let currentSection = 'apps';
             if (window.state.path === '#edukasi' || (activeAppObj && activeAppObj.section === 'edukasi')) currentSection = 'edukasi';
@@ -1366,22 +2547,59 @@
             const isAppView = window.state.path === '#apps' || window.state.path === '#edukasi' || isDirectApp;
             const profileName = window.state.isLoggedIn ? window.state.user.name : 'Assalamualaikum';
             const profileSub = window.state.isLoggedIn ? window.state.user.role : 'SDIT Al Kautsar';
+            const isAdminUser = window.state.isLoggedIn && (window.state.user.role === 'Super Admin' || window.state.user.role === 'Admin');
             const visibleMenus = window.DB.menus.filter(m => m.visible).sort((a,b) => a.order - b.order);
-            const visibleApps = window.DB.apps.filter(a => a.status && (!window.state.isLoggedIn ? a.roles.includes('Umum') : (a.roles.includes('Umum') || a.roles.includes(window.state.user.role))) && a.section === currentSection);
+            const visibleApps = window.DB.apps.filter(a => {
+                const appSec = (String(a.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
+                return window.canUserSeeApp(a) && appSec === currentSection;
+            });
+            const isSlider2Min = Boolean(window.state.slider2Minimized);
 
             let sidebarNav = visibleMenus.map(m => {
                 const isActiveMenu = window.state.path === m.hash || (m.hash === '#apps' && isAppView && currentSection === 'apps') || (m.hash === '#edukasi' && isAppView && currentSection === 'edukasi');
                 return `<a onclick="navigate('${m.hash}')" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] font-semibold text-[13px] transition-all cursor-pointer ${isActiveMenu ? 'bg-white shadow-sm text-brand-blue border border-white/60' : 'text-brand-muted hover:bg-white/40'}"><i data-lucide="${m.icon}" class="w-4 h-4"></i> ${m.name}</a>`;
             }).join('');
+
+            // PINTASAN ADMIN DI SIDEBAR KIRI BAWAH (HANYA 1 TOMBOL PANEL ADMIN)
+            const sidebarAdminShortcuts = isAdminUser ? `
+                <div class="mt-auto p-2.5 border-t border-white/40 flex flex-col gap-1.5">
+                    <button onclick="navigate('#admin-dashboard')" class="flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] font-bold text-[12px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all w-full text-left">
+                        <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i> Panel Admin
+                    </button>
+                </div>
+            ` : '';
             
+            // RENDER SLIDER 2 PERSIS SESUAI URUTAN & DATA DI SUPABASE (TANPA PENGELOMPOKAN KATEGORI LAMA)
             let appListHTML = '';
-            [...new Set(visibleApps.map(a => a.cat))].forEach(cat => {
-                appListHTML += `<div class="text-[10px] font-bold text-brand-muted uppercase tracking-wider mb-2 mt-3 px-1">${cat}</div>`;
-                visibleApps.filter(a => a.cat === cat).forEach(app => {
+            if (isSlider2Min) {
+                visibleApps.forEach(app => {
                     const isCurrentApp = window.state.path === '#app-' + app.id;
-                    appListHTML += `<div onclick="navigate('#app-${app.id}')" class="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-colors mb-1 ${isCurrentApp ? 'bg-white/70 shadow-sm border border-white' : 'hover:bg-white/50 border border-transparent'}"><div class="w-7 h-7 rounded-[8px] ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-3.5 h-3.5 ${app.color}"></i></div><div class="flex-1 min-w-0"><h4 class="text-[11px] font-bold ${isCurrentApp ? 'text-brand-blue' : 'text-brand-navy'} leading-none truncate">${app.name}</h4></div></div>`;
+                    appListHTML += `
+                        <div onclick="selectAppFromSlider2('${app.id}')" class="w-9 h-9 rounded-xl ${app.bg || 'bg-blue-100'} flex items-center justify-center shrink-0 border ${isCurrentApp ? 'border-blue-500 ring-2 ring-blue-400 shadow-md scale-105' : 'border-white/80 hover:bg-white hover:scale-105'} cursor-pointer transition-all relative group" title="${app.name}">
+                            <i data-lucide="${app.icon || 'layout-grid'}" class="w-4 h-4 ${app.color || 'text-blue-500'}"></i>
+                            ${isCurrentApp ? '<span class="w-2 h-2 bg-blue-500 rounded-full absolute -top-0.5 -right-0.5 border border-white shadow-sm"></span>' : ''}
+                        </div>
+                    `;
                 });
-            });
+            } else {
+                visibleApps.forEach(app => {
+                    const isCurrentApp = window.state.path === '#app-' + app.id;
+                    appListHTML += `
+                        <div onclick="selectAppFromSlider2('${app.id}')" class="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-all mb-1 ${isCurrentApp ? 'bg-white/80 shadow-sm border border-white' : 'hover:bg-white/50 border border-transparent'}">
+                            <div class="w-8 h-8 rounded-[10px] ${app.bg || 'bg-blue-100'} flex items-center justify-center shrink-0 border border-white shadow-xs">
+                                <i data-lucide="${app.icon || 'layout-grid'}" class="w-4 h-4 ${app.color || 'text-blue-500'}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-[11.5px] font-bold ${isCurrentApp ? 'text-brand-blue' : 'text-brand-navy'} leading-tight truncate">${app.name}</h4>
+                                ${app.cat ? `<p class="text-[9px] text-brand-muted truncate leading-none mt-0.5">${app.cat}</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                if (visibleApps.length === 0) {
+                    appListHTML = `<div class="p-4 text-center text-[11px] text-brand-muted font-medium">Belum ada aplikasi tersedia.</div>`;
+                }
+            }
 
             let bottomNavHtml = visibleMenus.map(m => {
                 const isActiveMenu = window.state.path === m.hash || (m.hash === '#apps' && isAppView && currentSection === 'apps') || (m.hash === '#edukasi' && isAppView && currentSection === 'edukasi');
@@ -1390,13 +2608,13 @@
 
             return `
             <div class="flex h-[100dvh] w-full overflow-hidden relative">
-                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav></aside>` : ''}
+                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav>${sidebarAdminShortcuts}</aside>` : ''}
                 
                 <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile && !isDirectApp && window.state.path !== '#login' ? 'pb-[70px]' : ''}">
                     ${isMobile ? `
                     <header class="h-[56px] flex items-center justify-between px-4 shrink-0 z-30 sticky top-0 ${isDirectApp ? 'bg-white/40 backdrop-blur-xl border-b border-white/50' : 'bg-transparent pt-2'} w-full">
                         ${isDirectApp ? `<button onclick="navigate('#${currentSection}')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px] glass-pill px-3 py-1.5 rounded-full shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i> Aplikasi</button><span class="ml-3 font-bold text-[13px] text-brand-navy truncate">${currentTitle}</span>${window.getZoomControls(true)}` 
-                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">${window.state.isLoggedIn ? 'Halo,' : 'SDIT Al Kautsar'}</span><span class="text-[13px] font-extrabold text-brand-navy leading-none truncate">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div><button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
+                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">${window.state.isLoggedIn ? 'Halo,' : 'SDIT Al Kautsar'}</span><span class="text-[13px] font-extrabold text-brand-navy leading-none truncate">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div class="flex items-center gap-2">${isAdminUser ? `<button onclick="navigate('#admin-dashboard')" class="bg-blue-600 text-white text-[11px] font-extrabold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1"><i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> Panel Admin</button>` : ''}<button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
                     </header>` : `
                     <header class="h-[60px] flex items-center px-6 shrink-0 z-30 bg-transparent w-full relative">
                         ${isIframe ? window.getZoomControls(false) : ''}
@@ -1404,17 +2622,33 @@
                             <div class="glass-pill w-full h-[36px] rounded-full flex items-center px-4 border border-white/80 shadow-sm"><i data-lucide="search" class="w-[16px] h-[16px] text-brand-muted mr-2"></i><input type="text" oninput="doSearch(this.value)" placeholder="Cari aplikasi..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div>
                             <div id="search-dropdown" class="hidden absolute top-[calc(100%+8px)] left-0 right-0 glass-panel rounded-2xl shadow-xl border border-white/60 overflow-hidden z-50"><div class="px-4 py-2 border-b border-white/30 bg-white/20"><span class="text-[11px] font-bold text-brand-muted uppercase">Hasil</span></div><div id="search-results-list" class="max-h-[300px] overflow-y-auto slider-scroll flex flex-col bg-white/10 p-1"></div></div>
                         </div>
-                        <div class="flex items-center gap-3 ml-auto relative">
+                        <div class="flex items-center gap-2.5 ml-auto relative">
+                            ${isAdminUser ? `
+                                <button onclick="navigate('#admin-dashboard')" class="bg-blue-600 hover:bg-blue-700 text-white h-[36px] px-3.5 rounded-full text-[11.5px] font-extrabold shadow-sm flex items-center gap-1.5 transition-all" title="Buka Panel Admin My Alka">
+                                    <i data-lucide="shield-alert" class="w-4 h-4"></i> Panel Admin
+                                </button>
+                            ` : ''}
                             <div class="relative"><button onclick="togglePopup('notif-popup-desktop', event)" class="w-[36px] h-[36px] rounded-full glass-pill flex justify-center items-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="absolute top-[8px] right-[9px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-desktop')}</div>
                             <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[38px] pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[10px] font-extrabold text-brand-navy truncate max-w-[110px]">${profileName}</span><span class="text-[8.5px] font-semibold text-brand-muted truncate max-w-[110px]">${profileSub}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
                         </div>
                     </header>`}
                     
                     <div class="flex-1 flex overflow-hidden relative w-full">
-                        ${!isMobile && isAppView ? `<aside class="w-[190px] shrink-0 bg-white/30 backdrop-blur-xl z-30 border-r border-white/40 flex flex-col"><div class="px-3 py-3 border-b border-white/30 mt-1"><h2 class="text-[13px] font-extrabold text-brand-navy ml-1">${currentSection === 'edukasi' ? 'Karya & Edukasi' : 'Daftar Aplikasi'}</h2></div><div class="flex-1 overflow-y-auto slider-scroll p-2">${appListHTML}</div></aside>` : ''}
+                        ${!isMobile && isAppView ? `
+                        <aside class="${isSlider2Min ? 'w-[56px]' : 'w-[190px]'} shrink-0 bg-white/30 backdrop-blur-xl z-30 border-r border-white/40 flex flex-col transition-all duration-300">
+                            <div class="h-[46px] px-2.5 flex items-center ${isSlider2Min ? 'justify-center' : 'justify-between'} border-b border-white/30 mt-1 shrink-0">
+                                ${!isSlider2Min ? `<h2 class="text-[12px] font-extrabold text-brand-navy ml-1 truncate">${currentSection === 'edukasi' ? 'Karya & Edukasi' : 'Daftar Aplikasi'}</h2>` : ''}
+                                <button onclick="toggleSlider2(event)" class="w-7 h-7 rounded-lg bg-white/70 hover:bg-white flex items-center justify-center text-brand-navy transition-all shadow-xs border border-white/80" title="${isSlider2Min ? 'Perlebar Slider' : 'Kecilkan Slider'}">
+                                    <i data-lucide="${isSlider2Min ? 'chevron-right' : 'chevron-left'}" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                            <div class="flex-1 overflow-y-auto slider-scroll ${isSlider2Min ? 'p-1.5 flex flex-col items-center gap-1.5' : 'p-2'}">
+                                ${appListHTML}
+                            </div>
+                        </aside>` : ''}
                         <main class="flex-1 w-full relative h-full overflow-hidden flex flex-col">
                             <div id="content-zoom-wrapper" class="w-full h-full flex flex-col bg-white/10" style="transform: scale(${window.state.zoom}); width: ${100 / window.state.zoom}%; height: ${100 / window.state.zoom}%;">
-                                ${isIframe && iframeUrl ? `<div class="w-full h-full flex-1 bg-white animate-fade"><iframe id="alka-main-iframe" src="${window.buildSsoIframeUrl(iframeUrl)}" onload="window.broadcastSsoToIframe(this)" class="w-full h-full border-0 block" allowfullscreen></iframe></div>` : window.renderNativeViews(window.state.path)}
+                                ${isIframe && iframeUrl ? `<div class="w-full h-full flex-1 bg-white animate-fade"><iframe id="alka-main-iframe" data-raw-url="${iframeUrl}" src="${window.buildSsoIframeUrl(iframeUrl)}" onload="window.broadcastSsoToIframe(this)" class="w-full h-full border-0 block" allowfullscreen></iframe></div>` : window.renderNativeViews(window.state.path)}
                             </div>
                         </main>
                     </div>
@@ -1451,265 +2685,28 @@
                 { title: 'Total Pegawai', val: window.DB.guru.length, icon: 'briefcase', color: 'blue' }
             ];
             const statCards = stats.map(s => `<div class="glass-panel p-5 rounded-[20px] flex flex-col relative overflow-hidden"><div class="flex items-center justify-between mb-4"><div class="w-10 h-10 rounded-xl bg-${s.color}-100 flex items-center justify-center text-${s.color}-500"><i data-lucide="${s.icon}" class="w-5 h-5"></i></div><span class="text-[24px] font-extrabold text-brand-navy">${s.val}</span></div><span class="text-[12px] font-bold text-brand-muted">${s.title}</span></div>`).join('');
-            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto h-full slider-scroll"><h1 class="text-[20px] font-extrabold text-brand-navy mb-5">Pusat Kendali Admin</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">${statCards}</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aksi Cepat</h3></div><div class="grid grid-cols-2 md:grid-cols-3 gap-3">${ADMIN_MENUS.map(m => `<button onclick="navigate('${m.hash}')" class="p-3 bg-white/40 hover:bg-white/70 border border-white/50 rounded-[14px] flex flex-col items-start gap-2.5 transition-colors text-left"><div class="w-7 h-7 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4"></i></div><span class="text-[12px] font-bold text-brand-navy">${m.name}</span></button>`).join('')}</div></div><div class="glass-panel p-5 rounded-[24px]"><div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div><div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div></div></div></div>`;
-        };
-
-        window.triggerAppSearch = function(val) { window.state.searchQueryApp = val.toLowerCase(); window.render(); };
-        window.renderAdminMenuApps = function() {
-            const rowsMenu = window.DB.menus.sort((a,b) => a.order - b.order).map(m => {
-                if (window.state.editingMenuId === m.id) {
-                    return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white/80 flex items-center justify-center text-brand-muted"><i data-lucide="grip-vertical" class="w-4 h-4"></i></div><span class="text-[11px] font-bold ml-1">${m.order}</span></div></td><td class="py-2.5 px-3"><input type="text" id="editMenuName-${m.id}" value="${m.name}" class="input-glass font-bold"></td><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-3 h-3 text-blue-500"></i></div><input type="text" id="editMenuIcon-${m.id}" value="${m.icon}" class="input-glass w-24"></div></td><td class="py-2.5 px-3"><input type="url" id="editMenuUrl-${m.id}" value="${m.url || ''}" ${m.type !== 'iframe' ? 'disabled placeholder="Grup Aplikasi"' : ''} class="input-glass min-w-[200px]"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit Mode</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveMenuInline('${m.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditMenu()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
-                } else {
-                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${m.id}', 'menu')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${m.id}', 'menu')" ondragend="handleDragEnd(event)"><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><span class="text-[12px] font-bold">${m.order}</span></div></td><td class="py-3 px-3 font-bold text-[13px] text-brand-navy">${m.name}</td><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4 text-blue-500"></i></div><span class="text-[11px] font-bold text-brand-muted hidden md:inline">${m.icon}</span></div></td><td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[250px]" title="${m.url}">${m.type === 'iframe' ? `<a href="${m.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${m.url}</a>` : 'Grup (Kumpulan Aplikasi)'}</div></td><td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${m.visible ? 'checked' : ''} onchange="toggleMenuVisibility('${m.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-3 text-right"><button onclick="startEditMenu('${m.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
-                }
-            }).join('');
-
-            const filteredApps = window.DB.apps.filter(a => a.name.toLowerCase().includes(window.state.searchQueryApp) || a.cat.toLowerCase().includes(window.state.searchQueryApp));
-            const generateAppRows = (appsList, typeKey) => {
-                return appsList.map(app => {
-                    const isUmum = app.roles.includes('Umum'); const isPegawai = app.roles.includes('Pegawai'); const isWarid = app.roles.includes('Warid');
-                    if (window.state.editingAppId === app.id) {
-                        const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
-                        return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-16 px-1"></div></td><td class="py-2.5 px-3"><input type="text" id="editAppName-${app.id}" value="${app.name}" class="input-glass font-bold w-full min-w-[100px] mb-1"><select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1"><option value="apps" ${app.section === 'apps' ? 'selected' : ''}>Laci Aplikasi</option><option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Laci Edukasi</option></select></td><td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass text-[10px] w-full min-w-[150px]"></td><td class="py-2.5 px-3"><select id="editAppColor-${app.id}" class="input-glass text-[11px] p-1">${colorOptions}</select></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Umum-${app.id}" ${isUmum ? 'checked' : ''} onchange="toggleUmumInline('${app.id}')" class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Pegawai-${app.id}" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Warid-${app.id}" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveAppInline('${app.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditApp()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm border border-white"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
-                    } else {
-                        return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${app.id}', '${typeKey}')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${app.id}', '${typeKey}')" ondragend="handleDragEnd(event)"><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div></div></td><td class="py-3 px-3"><div class="font-bold text-[13px] text-brand-navy">${app.name}</div><div class="text-[9px] text-brand-muted">${app.cat}</div></td><td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[200px]" title="${app.url}"><a href="${app.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${app.url}</a></div></td><td class="py-3 px-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${app.bg} ${app.color} border border-white capitalize">${app.color.replace('text-','').replace('-500','')}</span></td><td class="py-3 px-3 text-center">${isUmum ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td><td class="py-3 px-3 text-center">${isPegawai ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td><td class="py-3 px-3 text-center">${isWarid ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mx-auto"></i>' : '<i data-lucide="minus" class="w-4 h-4 text-gray-300 mx-auto"></i>'}</td><td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${app.status ? 'checked' : ''} onchange="toggleAppStatus('${app.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-3 text-right"><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex" onclick="startEditApp('${app.id}')"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
-                    }
-                }).join('');
-            };
-            const trsApps = generateAppRows(filteredApps.filter(a => a.section === 'apps'), 'app');
-            const trsEdukasi = generateAppRows(filteredApps.filter(a => a.section === 'edukasi'), 'edukasi');
-            const theadTemplate = `<thead class="bg-white/40 border-b border-white/50"><tr><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Ikon</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Aplikasi</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Warna</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Umum</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Pegawai</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[70px]">Warid</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[70px]">Status</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th></tr></thead>`;
             
-            return `<div class="p-4 md:p-6 w-full h-full flex flex-col overflow-y-auto slider-scroll box-border"><div class="glass-panel p-4 rounded-[20px] flex flex-col lg:flex-row lg:items-center justify-between mb-5 gap-3 shrink-0"><div><h1 class="text-[18px] font-extrabold text-brand-navy">Menu & Aplikasi</h1><p class="text-[11px] text-brand-muted mt-0.5">Kelola menu portal dan aplikasi. Tahan dan seret ikon 3 garis untuk mengubah urutan.</p></div><button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-5 py-2.5 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button></div><div class="mb-6 shrink-0"><h2 class="text-[14px] font-extrabold text-brand-navy mb-2 ml-2 flex items-center gap-2"><i data-lucide="menu" class="w-4 h-4 text-brand-blue"></i> Tabel Menu Utama Portal</h2><div class="glass-panel rounded-[20px] overflow-hidden w-full"><div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[600px]"><thead class="bg-white/40 border-b border-white/50"><tr><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Urutan</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Nama Menu</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Ikon</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Tampil</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th></tr></thead><tbody>${rowsMenu}</tbody></table></div></div></div><div class="flex flex-col md:flex-row md:items-center justify-between mb-2 mx-2 gap-3 shrink-0 mt-2"><h2 class="text-[14px] font-extrabold text-brand-navy flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand-blue"></i> Tabel Daftar Aplikasi Utama</h2><div class="flex items-center gap-3"><div class="relative w-full md:w-[200px]"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerAppSearch(this.value)" placeholder="Cari aplikasi..." value="${window.state.searchQueryApp}" class="input-glass pl-8 py-1.5"></div><button onclick="showToast('Fitur Tambah segera hadir')" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button></div></div><div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-6 w-full"><div class="overflow-x-auto slider-scroll w-full"><table class="w-full text-left border-collapse min-w-[1050px]">${theadTemplate}<tbody>${trsApps}</tbody></table>${filteredApps.filter(a => a.section === 'apps').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada aplikasi utama ditemukan.</div>' : ''}</div></div><h2 class="text-[14px] font-extrabold text-brand-navy mb-2 mx-2 flex items-center gap-2 shrink-0 mt-2"><i data-lucide="lightbulb" class="w-4 h-4 text-orange-500"></i> Tabel Daftar Karya & Edukasi</h2><div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-8 w-full"><div class="overflow-x-auto slider-scroll w-full"><table class="w-full text-left border-collapse min-w-[1050px]">${theadTemplate}<tbody>${trsEdukasi}</tbody></table>${filteredApps.filter(a => a.section === 'edukasi').length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada karya/edukasi ditemukan.</div>' : ''}</div></div></div>`;
-        };
+            const cloudBadge = window.state.cloudStatus === 'connected'
+                ? `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs"><div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div><span>Supabase: Real Data Cloud (Sync: ${window.state.cloudLastSync || 'Aktif'})</span></div>`
+                : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs"><div class="w-2 h-2 rounded-full bg-amber-500"></div><span>Mode Lokal / Offline Cache</span></div>`;
 
-        window.triggerUserSearch = function(val) { window.state.searchQueryUser = val.toLowerCase(); window.render(); };
-        window.renderAdminUsers = function() {
-            const filteredUsers = window.DB.users.filter(u => u.name.toLowerCase().includes(window.state.searchQueryUser) || u.role.toLowerCase().includes(window.state.searchQueryUser));
-            const trs = filteredUsers.map(u => {
-                const pwd = u.password || DEFAULT_PASSWORD;
-                const isDefaultPwd = pwd === DEFAULT_PASSWORD;
-                return `<tr class="border-b border-white/30 hover:bg-white/30 transition-colors"><td class="py-3 px-4"><div class="flex items-center gap-3"><img src="${u.avatar || window.getUserAvatarUrl(u.name)}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm"><div><div class="font-bold text-[13px] text-brand-navy">${u.name}</div><div class="text-[10px] text-brand-muted">${u.email}</div></div></div></td><td class="py-3 px-4"><span class="font-mono text-[11px] font-bold px-2 py-0.5 rounded border ${isDefaultPwd ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">${pwd}</span></td><td class="py-3 px-4 hidden md:table-cell"><span class="text-[11px] font-bold px-2.5 py-1 ${u.role === 'Super Admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600'} rounded-md border border-white/50">${u.role}</span></td><td class="py-3 px-4 hidden lg:table-cell"><div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full ${u.status ? 'bg-green-500' : 'bg-red-500'}"></div><span class="text-[12px] font-bold text-brand-navy">${u.status ? 'Aktif' : 'Nonaktif'}</span></div></td><td class="py-3 px-4 text-right"><div class="flex items-center justify-end gap-2"><button onclick="toggleUserStatus(${u.id})" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-muted border border-white shadow-sm" title="${u.status ? 'Nonaktifkan' : 'Aktifkan'}"><i data-lucide="${u.status ? 'ban' : 'check-circle'}" class="w-3.5 h-3.5 ${u.status ? 'text-red-500' : 'text-green-500'}"></i></button><button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm" onclick="showEditUserModal(${u.id})"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></div></td></tr>`;
-            }).join('');
-            return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border"><div class="glass-panel p-4 rounded-[20px] flex flex-col md:flex-row md:items-center justify-between mb-5 gap-3"><div><h1 class="text-[18px] font-extrabold text-brand-navy">Hak Akses Portal</h1><p class="text-[11px] text-brand-muted mt-0.5">Kelola akun dan password pengelola Portal.</p></div><div class="flex items-center gap-3"><div class="relative w-full max-w-[200px]"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerUserSearch(this.value)" placeholder="Cari pengguna..." value="${window.state.searchQueryUser}" class="input-glass pl-8 py-1.5"></div><button onclick="showAddUserModal()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah</button></div></div><div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full"><div class="overflow-y-auto slider-scroll flex-1 w-full"><table class="w-full text-left border-collapse min-w-[550px]"><thead class="bg-white/40 sticky top-0 backdrop-blur-md z-10"><tr><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase">Pengguna</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase">Password</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden md:table-cell">Role</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase hidden lg:table-cell">Status</th><th class="py-2.5 px-4 text-[10px] font-bold text-brand-muted uppercase text-right">Aksi</th></tr></thead><tbody>${trs}</tbody></table>${filteredUsers.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada pengguna ditemukan.</div>' : ''}</div></div></div>`;
-        };
-
-        // ============================================================================
-        // DATA PEGAWAI & GURU
-        // ============================================================================
-        const GURU_BIODATA_KEYS = ['nama', 'namaGelar', 'password', 'nik', 'nbm', 'jk', 'tempatLahir', 'tanggalLahir', 'provinsi', 'kabupaten', 'kecamatan', 'desa', 'alamatDetail', 'noWa', 'jenisKepegawaian', 'statusKepegawaian', 'pendidikanTerakhir', 'ptTerakhir', 'ptProvinsi', 'ptKabupaten', 'ptKecamatan', 'ptDesa', 'ptAlamatDetail', 'prodi', 'tahunMasuk', 'tahunLulus', 'ayahNama', 'ayahTahun', 'ayahNik', 'ayahPendidikan', 'ibuNama', 'ibuTahun', 'ibuNik', 'ibuPendidikan', 'linkKk', 'linkIjazah'];
-
-        window.downloadFormatGuru = function() {
-            const headers = GURU_BIODATA_KEYS.map(k => k.replace(/([A-Z])/g, '_$1').toUpperCase());
-            const rows = window.DB.guru.map(g => GURU_BIODATA_KEYS.map(k => k === 'password' ? (g.password || DEFAULT_PASSWORD) : (g[k] || '')));
-            window.exportPremiumExcel({
-                sheetName: "MasterPegawai",
-                fileName: "Format_Master_Pegawai.xlsx",
-                headers: headers,
-                rows: rows,
-                centerCols: [2, 3, 4, 5, 7, 13, 14, 15, 16, 24, 25, 27, 28, 31, 32],
-                boldCols: [0, 2],
-                getHeaderColor: (colIdx) => {
-                    if (colIdx <= 4) return '0F172A';
-                    if (colIdx <= 13) return '334155';
-                    if (colIdx <= 25) return '1E40AF';
-                    if (colIdx <= 33) return 'B45309';
-                    return '047857';
-                }
-            });
-        };
-
-        window.triggerUploadGuru = function() { document.getElementById('fileGuru').click(); };
-        window.handleUploadGuru = function(e) {
-            const file = e.target.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                json.forEach((row, i) => {
-                    const rowNik = String(row['NIK'] || '').trim();
-                    const rowNama = String(row['NAMA'] || '').trim();
-                    let existing = window.DB.guru.find(x => (rowNik && String(x.nik) === rowNik) || (rowNama && x.nama.toLowerCase() === rowNama.toLowerCase()));
-                    let g = existing || { id: Date.now() + i, password: DEFAULT_PASSWORD, status: true, waliKelas: '', tugasTambahan: '', pelatihEkstra: '', mapel1: '', kelasMapel1: '', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '' };
-                    GURU_BIODATA_KEYS.forEach(k => {
-                        const header = k.replace(/([A-Z])/g, '_$1').toUpperCase();
-                        if (row[header] !== undefined) {
-                            if (k === 'tanggalLahir') g[k] = window.formatDateId(row[header]);
-                            else if (k === 'password') g[k] = String(row[header] || DEFAULT_PASSWORD).trim() || DEFAULT_PASSWORD;
-                            else g[k] = row[header];
-                        }
-                    });
-                    if (!g.password) g.password = DEFAULT_PASSWORD;
-                    if (!existing) window.DB.guru.push(g);
-                });
-                window.showToast(json.length + ' Data Pegawai Diimpor!');
-                window.logActivity('Import Excel Pegawai', json.length + ' Baris', 'Pegawai', 'blue');
-                window.render();
-                document.getElementById('fileGuru').value = '';
-            };
-            reader.readAsArrayBuffer(file);
-        };
-
-        window.showEditGuru = function(id) {
-            const g = id ? window.DB.guru.find(x => x.id === id) : { password: DEFAULT_PASSWORD };
-            const isNew = !id;
-            let formHtml = `
-                <div class="mb-4 border-b border-gray-200 pb-3">
-                    <h2 class="text-lg font-extrabold text-brand-navy">${isNew ? 'Tambah' : 'Edit'} Biodata Pegawai</h2>
-                    <p class="text-[11px] text-brand-muted">Isi data induk kepegawaian & password login. Untuk penugasan (Wali Kelas, Mapel, Ekstra) diatur pada menu Tugas Pegawai.</p>
-                </div>
-                <form id="guruForm" onsubmit="saveEditGuru(event, ${id || 'null'})" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto slider-scroll p-1 pr-3">`;
-            GURU_BIODATA_KEYS.forEach(key => {
-                const label = key.replace(/([A-Z])/g, ' $1').toUpperCase();
-                const val = key === 'password' ? (g.password || DEFAULT_PASSWORD) : (g[key] || '');
-                formHtml += `<div class="flex flex-col gap-1"><label class="text-[10px] font-bold text-brand-muted">${label}</label><input type="text" id="g_${key}" value="${val}" ${key === 'nama' ? 'required' : ''} class="input-glass" placeholder="${label}"></div>`;
-            });
-            formHtml += `</form>
-                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
-                    <button type="submit" form="guruForm" class="px-5 py-2 text-xs font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Biodata</button>
-                </div>`;
-            window.openModal(formHtml);
-        };
-
-        window.saveEditGuru = function(e, id) {
-            e.preventDefault();
-            let g = id ? window.DB.guru.find(x => x.id === id) : { id: Date.now(), password: DEFAULT_PASSWORD, status: true, waliKelas: '', tugasTambahan: '', pelatihEkstra: '', mapel1: '', kelasMapel1: '', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '' };
-            GURU_BIODATA_KEYS.forEach(k => { g[k] = document.getElementById('g_' + k).value; });
-            if (!g.password) g.password = DEFAULT_PASSWORD;
-            if (!id) window.DB.guru.push(g);
-            window.logActivity(id ? 'Edit Biodata Pegawai' : 'Tambah Pegawai Baru', g.nama, 'Pegawai', 'blue');
-            window.showToast('Biodata Pegawai Tersimpan!');
-            window.closeModal();
-            window.render();
-        };
-
-        window.triggerGuruSearch = function(val) { window.state.searchQueryGuru = val.toLowerCase(); window.render(); };
-
-        window.renderAdminGuru = function() {
-            const filteredGuru = window.DB.guru.filter(g => (g.nama && g.nama.toLowerCase().includes(window.state.searchQueryGuru)) || (g.nik && String(g.nik).includes(window.state.searchQueryGuru)) || (g.nbm && String(g.nbm).includes(window.state.searchQueryGuru)));
-            const trs = filteredGuru.map((g, idx) => {
-                const pwd = g.password || DEFAULT_PASSWORD;
-                const isDefaultPwd = pwd === DEFAULT_PASSWORD;
-                return `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors bg-white">
-                    <td class="py-3 px-3 whitespace-nowrap sticky-col-1 text-center text-[11px] font-bold text-brand-muted w-[60px] min-w-[60px]">${idx + 1}</td>
-                    <td class="py-3 px-4 whitespace-nowrap sticky-col-2">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center border border-white text-blue-500 shrink-0"><i data-lucide="briefcase" class="w-3.5 h-3.5"></i></div>
-                            <div>
-                                <div class="font-bold text-[13px] text-brand-navy">${g.nama || '-'} <span class="text-[10px] font-semibold text-brand-muted ml-1">${g.namaGelar || ''}</span></div>
-                                <div class="text-[9.5px] text-brand-muted font-mono leading-tight mt-0.5">NIK: <span class="font-bold">${g.nik || '-'}</span> <span class="mx-1.5">•</span> NBM: <span class="font-bold">${g.nbm || '-'}</span></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 whitespace-nowrap text-center">
-                        <span class="font-mono text-[11px] font-bold px-2 py-0.5 rounded border ${isDefaultPwd ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">${pwd}</span>
-                    </td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[12px] font-bold text-brand-navy text-center">${g.jk || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-navy">${g.tempatLahir || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.tanggalLahir)}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.provinsi || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.kabupaten || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.kecamatan || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.desa || '-'}</td>
-                    <td class="py-3 px-4 text-[11px] text-brand-muted min-w-[200px] truncate max-w-[250px]" title="${g.alamatDetail || ''}">${g.alamatDetail || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono font-bold text-brand-blue"><i data-lucide="phone" class="w-3 h-3 inline mr-1 text-green-500"></i>${g.noWa || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.jenisKepegawaian || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-center"><span class="text-[10px] font-bold px-2 py-1 rounded bg-green-50 text-green-600 border border-green-100">${g.statusKepegawaian || '-'}</span></td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-extrabold text-brand-navy">${g.pendidikanTerakhir || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-navy font-semibold">${g.ptTerakhir || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptProvinsi || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptKabupaten || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptKecamatan || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptDesa || '-'}</td>
-                    <td class="py-3 px-4 text-[11px] text-brand-muted min-w-[200px] truncate max-w-[250px]" title="${g.ptAlamatDetail || ''}">${g.ptAlamatDetail || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.prodi || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${g.tahunMasuk || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-navy font-bold text-center">${g.tahunLulus || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.ayahNama || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.ayahTahun)}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted">${g.ayahNik || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ayahPendidikan || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.ibuNama || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.ibuTahun)}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted">${g.ibuNik || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ibuPendidikan || '-'}</td>
-                    <td class="py-3 px-4 whitespace-nowrap text-center"><a href="${g.linkKk || '#'}" target="_blank" class="text-blue-500 hover:text-blue-700 mx-auto block w-fit p-1 bg-blue-50 rounded" title="Lihat KK"><i data-lucide="file-text" class="w-4 h-4"></i></a></td>
-                    <td class="py-3 px-4 whitespace-nowrap text-center"><a href="${g.linkIjazah || '#'}" target="_blank" class="text-blue-500 hover:text-blue-700 mx-auto block w-fit p-1 bg-blue-50 rounded" title="Lihat Ijazah"><i data-lucide="graduation-cap" class="w-4 h-4"></i></a></td>
-                    <td class="py-3 px-4 whitespace-nowrap text-center"><div class="w-2 h-2 rounded-full ${g.status ? 'bg-green-500' : 'bg-red-500'} mx-auto"></div></td>
-                    <td class="py-3 px-4 text-right whitespace-nowrap sticky right-0 bg-white shadow-[-2px_0_5px_rgba(0,0,0,0.04)] z-20 border-l border-slate-200">
-                        <button class="w-7 h-7 rounded-lg bg-white hover:bg-gray-50 flex items-center justify-center text-brand-blue border border-gray-200 shadow-sm inline-flex" onclick="showEditGuru(${g.id})" title="Edit Biodata Pegawai"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            return `
-            <div class="p-4 md:p-6 w-full h-full flex flex-col box-border relative">
-                <div class="glass-panel p-4 rounded-[20px] flex flex-col xl:flex-row xl:items-center justify-between mb-5 gap-3 shrink-0 relative z-40">
+            return `<div class="p-5 md:p-8 max-w-[1200px] mx-auto overflow-y-auto h-full slider-scroll">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                     <div>
-                        <h1 class="text-[18px] font-extrabold text-brand-navy">Buku Induk Pegawai & Guru</h1>
-                        <p class="text-[11px] text-brand-muted mt-0.5">Validasi identitas, password login, pendidikan, dan orang tua pegawai.</p>
+                        <h1 class="text-[20px] font-extrabold text-brand-navy">Pusat Kendali Admin</h1>
+                        <p class="text-[11px] text-brand-muted">Manajemen integrasi portal My Alka & pangkalan data SDIT Al Kautsar.</p>
                     </div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <div class="relative w-full md:w-[180px] mr-2">
-                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i>
-                            <input type="text" oninput="triggerGuruSearch(this.value)" placeholder="Cari NIK/Nama..." value="${window.state.searchQueryGuru}" class="input-glass pl-8 py-1.5">
-                        </div>
-                        <button onclick="triggerUploadGuru()" class="bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Upload Master</button>
-                        <button onclick="downloadFormatGuru()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Unduh Format</button>
-                        <button onclick="showEditGuru()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 ml-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button>
-                        <button onclick="globalSave()" class="bg-brand-navy hover:bg-black text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 ml-1"><i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan</button>
-                    </div>
+                    ${cloudBadge}
                 </div>
-                
-                <div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full relative z-10 shadow-sm border border-white">
-                    <div class="overflow-x-auto overflow-y-auto slider-scroll flex-1 w-full bg-white">
-                        <table class="w-full text-left border-collapse min-w-[3350px]">
-                            <thead>
-                                <tr>
-                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-col-1-header text-center w-[60px] min-w-[60px]">NO</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-col-2-header">NAMA PEGAWAI</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fef3c7]">PASSWORD</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">L / P</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">TEMPAT LAHIR</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">TANGGAL LAHIR</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">PROVINSI</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">KABUPATEN</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">KECAMATAN</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">DESA</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">ALAMAT DETAIL</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">NO. WHATSAPP</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">JENIS KEPEG.</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">STATUS</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PEND. TERAKHIR</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PT TERAKHIR</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PROV. PT</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">KAB. PT</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">KEC. PT</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">DESA PT</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">ALAMAT PT DETAIL</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PRODI</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">THN MASUK</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">THN LULUS</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NAMA AYAH</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fed7aa]">THN AYAH</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NIK AYAH</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">PEND. AYAH</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NAMA IBU</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fed7aa]">THN IBU</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NIK IBU</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">PEND. IBU</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#a7f3d0]">LINK KK</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#a7f3d0]">LINK IJAZAH</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">AKTIF</th>
-                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase text-right whitespace-nowrap sticky right-0 top-0 z-50 bg-[#e2e8f0] shadow-[-2px_2px_5px_rgba(0,0,0,0.06)] border-l border-b-2 border-[#cbd5e1]">AKSI</th>
-                                </tr>
-                            </thead>
-                            <tbody>${trs}</tbody>
-                        </table>
-                        ${filteredGuru.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada data pegawai ditemukan.</div>' : ''}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">${statCards}</div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="lg:col-span-2 glass-panel p-5 rounded-[24px]">
+                        <div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aksi Cepat</h3></div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${ADMIN_MENUS.map(m => `<button onclick="navigate('${m.hash}')" class="p-3 bg-white/40 hover:bg-white/70 border border-white/50 rounded-[14px] flex flex-col items-start gap-2.5 transition-colors text-left"><div class="w-7 h-7 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4"></i></div><span class="text-[12px] font-bold text-brand-navy">${m.name}</span></button>`).join('')}</div>
+                    </div>
+                    <div class="glass-panel p-5 rounded-[24px]">
+                        <div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div>
+                        <div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div>
                     </div>
                 </div>
             </div>`;
@@ -1957,7 +2954,7 @@
         };
 
         // ============================================================================
-        // DATA SISWA & WALI
+        // DATA SISWA & WALI (47 KOLOM KOMPLIT STANDAR DAPODIK)
         // ============================================================================
         const SISWA_KEYS = ['no', 'no_presensi', 'nama_siswa', 'password', 'kelas', 'ekstrakurikuler', 'nis', 'nisn', 'nik_anak', 'l_p', 'agama', 'anak_ke', 'tempat_lahir', 'tgl_lahir', 'no_kk', 'tgl_kk', 'alamat_provinsi', 'alamat_kabupaten', 'alamat_kecamatan', 'alamat_desa', 'alamat_jalan', 'alamat_rt', 'alamat_rw', 'sekolah_nama', 'sekolah_npsn', 'sekolah_provinsi', 'sekolah_kabupaten', 'sekolah_kecamatan', 'nama_ayah', 'ayah_nik', 'ayah_tahun_lahir', 'ayah_pendidikan', 'ayah_pekerjaan', 'ayah_penghasilan', 'nama_ibu', 'ibu_nik', 'ibu_tahun_lahir', 'ibu_pendidikan', 'ibu_pekerjaan', 'ibu_penghasilan', 'alamat_ortu', 'nama_wali', 'kerja_wali', 'alamat_wali', 'no_wa', 'link_kk', 'link_ijazah'];
         const SISWA_HEADERS = ['NO', 'NO PRESENSI', 'NAMA SISWA', 'PASSWORD', 'KELAS', 'EKSTRAKURIKULER', 'NIS', 'NISN', 'NIK ANAK', 'L / P', 'AGAMA', 'ANAK KE', 'TEMPAT LAHIR', 'TANGGAL LAHIR', 'NO KK', 'TANGGAL KK', 'ALAMAT PROVINSI', 'ALAMAT KABUPATEN', 'ALAMAT KECAMATAN', 'ALAMAT DESA', 'ALAMAT JALAN', 'ALAMAT RT', 'ALAMAT RW', 'SEKOLAH NAMA', 'SEKOLAH NPSN', 'SEKOLAH PROVINSI', 'SEKOLAH KABUPATEN', 'SEKOLAH KECAMATAN', 'NAMA AYAH', 'AYAH NIK', 'AYAH TAHUN LAHIR', 'AYAH PENDIDIKAN', 'AYAH PEKERJAAN', 'AYAH PENGHASILAN', 'NAMA IBU', 'IBU NIK', 'IBU TAHUN LAHIR', 'IBU PENDIDIKAN', 'IBU PEKERJAAN', 'IBU PENGHASILAN', 'ALAMAT ORTU', 'NAMA WALI', 'KERJA WALI', 'ALAMAT WALI', 'NO WHATSAPP', 'LINK KK', 'LINK IJAZAH'];
