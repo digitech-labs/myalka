@@ -274,7 +274,85 @@
             logs: [{ time: '12:00', user: 'Sistem', action: 'Sistem dimulai', target: 'Core', type: 'System', color: 'blue' }]
         };
 
-        const NOTIFICATIONS = [{ id: 1, title: 'Selamat Datang!', desc: 'My Alka v2.0 terintegrasi ke Supabase.', icon: 'info', color: 'text-blue-500', bg: 'bg-blue-100', target: '#home', read: true }];
+        const DEFAULT_NOTIFICATIONS = [
+            {
+                id: 1,
+                title: 'Informasi Versi: My Alka v2.5',
+                desc: 'Pembaruan sistem portal integrasi, matriks hak akses, dan optimasi Cloud Supabase.',
+                version: 'v2.5.0 Stable (Enterprise)',
+                date: 'Terbaru',
+                category: 'Pembaruan Versi',
+                icon: 'sparkles',
+                color: 'text-blue-500',
+                bg: 'bg-blue-100',
+                target: '#home',
+                read: false,
+                details: [
+                    'Integrasi penuh Cloud Supabase (Realtime State & Tabel Relasional Guru/Siswa).',
+                    'Sistem Matriks Hak Akses & Delegasi Admin per Aplikasi secara instan.',
+                    'Jembatan Dual-Bridge SSO otomatis ke seluruh aplikasi Iframe terintegrasi.',
+                    'Desain antarmuka Glassmorphism dilengkapi kontrol Zoom ringkas & aksen macOS.',
+                    'Akselerasi tabel Buku Induk Siswa (47 kolom Dapodik) & Pegawai (36 kolom).'
+                ]
+            },
+            {
+                id: 2,
+                title: 'Keamanan Akun & Single Sign-On',
+                desc: 'Panduan login satu pintu (SSO) dan kebijakan wajib ganti password default.',
+                version: 'Protokol Keamanan SSO v2',
+                date: 'Info Sistem',
+                category: 'Keamanan',
+                icon: 'shield-check',
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-100',
+                target: '#profil',
+                read: false,
+                details: [
+                    'Cukup login 1 kali di Portal My Alka untuk mengakses aplikasi sesuai hak akses role.',
+                    'Pengguna baru dengan password default (123456) wajib mengganti password saat login pertama.',
+                    'Perubahan password langsung tersinkronisasi ke database utama Supabase.',
+                    'Delegasi Admin Aplikasi otomatis membuka fitur pengelolaan di aplikasi terkait.'
+                ]
+            },
+            {
+                id: 3,
+                title: 'Selamat Datang di My Alka!',
+                desc: 'Portal Integrasi Digital & Pangkalan Data SDIT Muhammadiyah Al Kautsar.',
+                version: 'Edisi Portal Terpadu',
+                date: 'Pesan Sambutan',
+                category: 'Informasi Umum',
+                icon: 'info',
+                color: 'text-orange-500',
+                bg: 'bg-orange-100',
+                target: '#home',
+                read: false,
+                details: [
+                    'Assalamualaikum Warahmatullahi Wabarakatuh.',
+                    'Selamat datang di My Alka, pusat layanan digital terpadu untuk Guru, Pegawai, Siswa, dan Wali Murid.',
+                    'Gunakan menu di samping kiri (atau navigasi bawah di HP) untuk menjelajahi aplikasi akademik dan edukasi.',
+                    'Gunakan fitur pencarian cepat di bagian atas untuk menemukan layanan yang Anda butuhkan.'
+                ]
+            }
+        ];
+
+        window.loadNotificationsFromStorage = function() {
+            try {
+                const saved = localStorage.getItem('alka_portal_notifications_v26');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) return parsed;
+                }
+            } catch (e) {}
+            return JSON.parse(JSON.stringify(DEFAULT_NOTIFICATIONS));
+        };
+
+        window.saveNotificationsToStorage = function() {
+            try {
+                localStorage.setItem('alka_portal_notifications_v26', JSON.stringify(window.NOTIFICATIONS));
+            } catch (e) {}
+        };
+
+        window.NOTIFICATIONS = window.loadNotificationsFromStorage();
 
         window.state = {
             path: window.location.hash || '#home',
@@ -289,6 +367,8 @@
             searchQueryGuru: '',
             searchQuerySiswa: '',
             searchQueryTugas: '',
+            siswaPage: 1,
+            siswaPerPage: 50,
             editingMenuId: null,
             editingAppId: null,
             isUsersTableEditable: true,
@@ -707,7 +787,7 @@
                     </button>
                 </div>
             `;
-            window.openModal(html);
+            window.openModal(html, true);
         };
 
         window.renderPwaFloatingBanner = function() {
@@ -1053,9 +1133,11 @@
             if (supabaseClient) window.globalSave();
         };
 
-        window.openModal = function(htmlContent) {
+        window.openModal = function(htmlContent, isCompact = false) {
             const overlay = document.getElementById('modal-overlay');
             const body = document.getElementById('modal-body');
+            body.style.maxWidth = isCompact ? '360px' : '720px';
+            body.style.padding = isCompact ? '18px' : '24px';
             body.innerHTML = htmlContent;
             overlay.classList.add('show');
             if (window.lucide) lucide.createIcons();
@@ -1071,7 +1153,7 @@
         window.handleDragStart = function(e, id, type) { dragSrcEl = e.target.closest('.draggable-row'); dragType = type; dragId = id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); dragSrcEl.classList.add('dragging'); };
         window.handleDragOver = function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const tr = e.target.closest('.draggable-row'); if (tr && tr !== dragSrcEl) { tr.classList.add('drag-over'); } return false; };
         window.handleDragLeave = function(e) { const tr = e.target.closest('.draggable-row'); if (tr) tr.classList.remove('drag-over'); };
-        window.handleDrop = function(e, targetId, type) { e.stopPropagation(); const tr = e.target.closest('.draggable-row'); if (tr) tr.classList.remove('drag-over'); if (dragSrcEl && dragType === type && dragId !== targetId) { let arr = (type === 'menu') ? window.DB.menus : window.DB.apps; const fromIdx = arr.findIndex(item => item.id == dragId); const toIdx = arr.findIndex(item => item.id == targetId); if (fromIdx !== -1 && toIdx !== -1) { const [movedItem] = arr.splice(fromIdx, 1); arr.splice(toIdx, 0, movedItem); if (type === 'menu') { arr.forEach((m, idx) => m.order = idx + 1); } window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue'); window.render(); } } return false; };
+        window.handleDrop = function(e, targetId, type) { e.stopPropagation(); const tr = e.target.closest('.draggable-row'); if (tr) tr.classList.remove('drag-over'); if (dragSrcEl && dragType === type && String(dragId) !== String(targetId)) { let arr = (type === 'menu') ? window.DB.menus : window.DB.apps; const fromIdx = arr.findIndex(item => String(item.id) === String(dragId)); const toIdx = arr.findIndex(item => String(item.id) === String(targetId)); if (fromIdx !== -1 && toIdx !== -1) { const [movedItem] = arr.splice(fromIdx, 1); arr.splice(toIdx, 0, movedItem); if (type === 'menu') { arr.forEach((m, idx) => m.order = idx + 1); } window.logActivity(`Mengubah urutan ${type === 'menu' ? 'Menu' : 'Aplikasi'}`, movedItem.name, 'Sistem', 'blue'); window.render(); window.globalSave(); } } return false; };
         window.handleDragEnd = function(e) { if (dragSrcEl) dragSrcEl.classList.remove('dragging'); document.querySelectorAll('.draggable-row').forEach(el => el.classList.remove('drag-over')); };
         window.enableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'true'); };
         window.disableDrag = function(btn) { btn.closest('.draggable-row').setAttribute('draggable', 'false'); };
@@ -1098,8 +1180,9 @@
                 window.showToast('Menu berhasil diperbarui!');
             }
             window.render();
+            window.globalSave();
         };
-        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => String(m.id) === String(id)); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); } };
+        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => String(m.id) === String(id)); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); window.globalSave(); } };
         
         // ============================================================================
         // MANAJEMEN APLIKASI: EDIT INLINE, TAMBAH APLIKASI, & HAPUS APLIKASI
@@ -1120,6 +1203,92 @@
                 if (cbAdmin) cbAdmin.disabled = false;
                 if (cbPegawai) cbPegawai.disabled = false;
                 if (cbWarid) cbWarid.disabled = false;
+            }
+        };
+
+        window.toggleAppRoleDirect = function(appId, roleName, isChecked) {
+            const app = window.DB.apps.find(a => String(a.id) === String(appId));
+            if (!app) return;
+            if (!Array.isArray(app.roles)) app.roles = ['Umum'];
+
+            if (roleName === 'Umum') {
+                if (isChecked) {
+                    app.roles = ['Umum'];
+                } else {
+                    app.roles = ['Admin', 'Pegawai'];
+                }
+            } else {
+                app.roles = app.roles.filter(r => r !== 'Umum');
+                if (isChecked) {
+                    if (!app.roles.includes(roleName)) app.roles.push(roleName);
+                } else {
+                    app.roles = app.roles.filter(r => r !== roleName);
+                    if (app.roles.length === 0) app.roles = ['Umum'];
+                }
+            }
+            window.logActivity(`Mengubah visibilitas role aplikasi ${app.name}`, app.roles.join(', '), 'Aplikasi', 'blue');
+            window.showToast(`Visibilitas ${app.name}: ${app.roles.join(', ')}`);
+            window.render();
+            window.globalSave();
+        };
+
+        window.commitAppInlineSilent = function(id) {
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                const nameEl = document.getElementById(`editAppName-${id}`);
+                const iconEl = document.getElementById(`editAppIcon-${id}`);
+                const urlEl = document.getElementById(`editAppUrl-${id}`);
+                const secEl = document.getElementById(`editAppSection-${id}`);
+                const catEl = document.getElementById(`editAppCat-${id}`);
+                const colEl = document.getElementById(`editAppColor-${id}`);
+                const umumEl = document.getElementById(`editAppRole-Umum-${id}`);
+
+                if (nameEl && nameEl.value.trim()) app.name = nameEl.value.trim();
+                if (iconEl && iconEl.value.trim()) app.icon = iconEl.value.trim();
+                if (urlEl) app.url = urlEl.value.trim();
+                if (secEl) app.section = secEl.value;
+                if (catEl && catEl.value.trim()) app.cat = catEl.value.trim();
+
+                if (colEl) {
+                    const foundColor = AVAILABLE_COLORS.find(c => c.id === colEl.value);
+                    if (foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; }
+                }
+
+                if (umumEl) {
+                    let newRoles = [];
+                    if (umumEl.checked) {
+                        newRoles.push('Umum');
+                    } else {
+                        if (document.getElementById(`editAppRole-Admin-${id}`) && document.getElementById(`editAppRole-Admin-${id}`).checked) newRoles.push('Admin');
+                        if (document.getElementById(`editAppRole-Pegawai-${id}`) && document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai');
+                        if (document.getElementById(`editAppRole-Warid-${id}`) && document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid');
+                        if (newRoles.length === 0) newRoles.push('Admin');
+                    }
+                    app.roles = newRoles;
+                }
+            }
+            window.state.editingAppId = null;
+        };
+
+        window.saveAppInline = function(id) {
+            window.commitAppInlineSilent(id);
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue');
+                window.showToast('Aplikasi berhasil diperbarui!');
+            }
+            window.render();
+            window.globalSave();
+        };
+
+        window.toggleAppStatus = function(id) {
+            const app = window.DB.apps.find(a => String(a.id) === String(id));
+            if (app) {
+                app.status = !app.status;
+                window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
+                window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
+                window.render();
+                window.globalSave();
             }
         };
 
@@ -2280,36 +2449,199 @@
 
         const logoSvg = `<img src="./MyAlka.png" class="w-full h-full object-cover rounded-xl" onerror="this.src='https://placehold.co/100x100/2878F0/ffffff?text=Alka'">`;
         const logoLargeSvg = `<img src="./MyAlka.png" class="w-full h-full object-cover rounded-2xl shadow" onerror="this.src='https://placehold.co/200x200/2878F0/ffffff?text=MyAlka'">`;
+        const macOsDotsHtml = `
+            <div class="flex items-center gap-1.5 shrink-0" title="My Alka Window">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FF5F56] border border-black/10 shadow-2xs inline-block"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] border border-black/10 shadow-2xs inline-block"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#27C93F] border border-black/10 shadow-2xs inline-block"></span>
+            </div>
+        `;
 
         window.getZoomControls = function(isMobile) {
-            return `<div class="glass-pill h-[36px] rounded-full flex items-center shrink-0 px-1 border border-white/80 shadow-sm ${isMobile ? 'ml-auto' : 'mr-4'}"><button onclick="changeZoom(-0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">-</button><span class="zoom-val text-[12px] font-bold text-brand-navy w-[44px] text-center border-x border-white/30">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-8 h-full flex justify-center items-center hover:bg-white/50 text-brand-navy font-bold transition-colors">+</button></div>`;
+            return `<div class="glass-pill h-[28px] rounded-full flex items-center shrink-0 px-0.5 border border-white/80 shadow-xs" title="Atur Ukuran Tampilan"><button onclick="changeZoom(-0.1)" class="w-6 h-full flex justify-center items-center hover:bg-white/60 rounded-l-full text-brand-navy text-[11px] font-extrabold transition-colors leading-none">-</button><span class="zoom-val text-[9.5px] font-extrabold text-brand-navy w-[34px] text-center border-x border-white/40 select-none">${Math.round(window.state.zoom * 100)}%</span><button onclick="changeZoom(0.1)" class="w-6 h-full flex justify-center items-center hover:bg-white/60 rounded-r-full text-brand-navy text-[11px] font-extrabold transition-colors leading-none">+</button></div>`;
+        };
+
+        window.updateNotifBadgesUI = function() {
+            const unreadCount = window.NOTIFICATIONS.filter(n => !n.read).length;
+            document.querySelectorAll('.notif-bell-dot').forEach(el => {
+                if (unreadCount > 0) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+            document.querySelectorAll('.notif-unread-badge').forEach(el => {
+                if (unreadCount > 0) {
+                    el.textContent = unreadCount + ' Baru';
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        };
+
+        window.openNotificationDetail = function(notifId, e) {
+            if (e) e.stopPropagation();
+            const notif = window.NOTIFICATIONS.find(n => String(n.id) === String(notifId));
+            if (!notif) return;
+
+            notif.read = true;
+            window.saveNotificationsToStorage();
+            window.renderNotifItems();
+            window.updateNotifBadgesUI();
+            window.closeAllPopups();
+
+            const detailsListHtml = Array.isArray(notif.details) && notif.details.length > 0
+                ? `<div class="bg-slate-50/90 border border-slate-200/80 rounded-xl p-2.5 text-left mb-3">
+                    <ul class="space-y-1.5">
+                        ${notif.details.map(item => `
+                            <li class="flex items-start gap-2 text-[11px] text-brand-navy font-medium leading-snug">
+                                <span class="text-blue-500 font-extrabold shrink-0">•</span>
+                                <span>${item}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>`
+                : '';
+
+            const html = `
+                <div class="relative text-left select-none">
+                    <div class="flex items-start justify-between gap-2.5 border-b border-slate-200/80 pb-2.5 mb-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-xl ${notif.bg} flex items-center justify-center border border-white shadow-2xs shrink-0">
+                                <i data-lucide="${notif.icon}" class="w-4 h-4 ${notif.color}"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue border border-blue-100 inline-block mb-0.5">${notif.category || 'Info'}${notif.version ? ' • ' + notif.version : ''}</span>
+                                <h3 class="text-[13.5px] font-extrabold text-brand-navy leading-tight truncate">${notif.title}</h3>
+                            </div>
+                        </div>
+                        <button onclick="closeModal()" class="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-brand-muted shrink-0 transition-colors">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-[11.5px] text-brand-muted font-medium leading-relaxed mb-2.5">
+                        ${notif.desc}
+                    </p>
+
+                    ${detailsListHtml}
+
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70">
+                        <button onclick="deleteSingleReadNotif(${notif.id}); closeModal();" class="px-2.5 py-1.5 rounded-lg text-[10.5px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-1 transition-colors">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Hapus
+                        </button>
+                        <button onclick="closeModal()" class="px-4 py-1.5 rounded-xl text-[11px] font-extrabold bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            `;
+            window.openModal(html, true);
+        };
+
+        window.deleteSingleReadNotif = function(notifId, e) {
+            if (e) e.stopPropagation();
+            const idx = window.NOTIFICATIONS.findIndex(n => String(n.id) === String(notifId));
+            if (idx !== -1) {
+                window.NOTIFICATIONS.splice(idx, 1);
+                window.saveNotificationsToStorage();
+                window.renderNotifItems();
+                window.updateNotifBadgesUI();
+                window.showToast('Notifikasi yang sudah dibaca berhasil dihapus.', 'trash-2', 'text-red-500');
+            }
+        };
+
+        window.deleteAllReadNotifications = function(e) {
+            if (e) e.stopPropagation();
+            const readCount = window.NOTIFICATIONS.filter(n => n.read).length;
+            if (readCount === 0) {
+                window.showToast('Tidak ada notifikasi sudah dibaca untuk dihapus.', 'info', 'text-orange-500');
+                return;
+            }
+            window.NOTIFICATIONS = window.NOTIFICATIONS.filter(n => !n.read);
+            window.saveNotificationsToStorage();
+            window.renderNotifItems();
+            window.updateNotifBadgesUI();
+            window.showToast(`${readCount} notifikasi yang sudah dibaca berhasil dihapus!`, 'trash-2', 'text-red-500');
         };
 
         window.renderNotifItems = function() {
-            const container = document.getElementById('notif-items-container');
-            if (!container) return;
-            const isSemua = window.state.notifTab === 'semua';
-            const filtered = isSemua ? NOTIFICATIONS : NOTIFICATIONS.filter(n => !n.read);
+            const tab = window.state.notifTab || 'semua';
+            const unreadCount = window.NOTIFICATIONS.filter(n => !n.read).length;
+            const readCount = window.NOTIFICATIONS.filter(n => n.read).length;
+
+            let filtered = [];
+            if (tab === 'sudah_dibaca') {
+                filtered = window.NOTIFICATIONS.filter(n => n.read);
+            } else {
+                filtered = window.NOTIFICATIONS.filter(n => !n.read);
+            }
+
             let html = '';
+            if (tab === 'sudah_dibaca' && readCount > 0) {
+                html += `
+                    <div class="px-2 pt-1 pb-2 mb-1 border-b border-white/50 flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-brand-muted">${readCount} Notifikasi Sudah Dibaca</span>
+                        <button onclick="deleteAllReadNotifications(event)" class="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[10px] font-extrabold flex items-center gap-1 transition-colors shadow-2xs">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Hapus Sudah Dibaca
+                        </button>
+                    </div>
+                `;
+            }
+
             if (filtered.length === 0) {
-                html = '<p class="text-center text-[11px] text-brand-muted p-4">Tidak ada notifikasi.</p>';
+                const emptyText = tab === 'sudah_dibaca'
+                    ? 'Belum ada riwayat notifikasi yang sudah dibaca.'
+                    : 'Semua notifikasi sudah dibaca.';
+                html += `<div class="text-center py-6 px-4"><i data-lucide="bell-off" class="w-6 h-6 text-brand-muted/50 mx-auto mb-1.5"></i><p class="text-[11px] font-semibold text-brand-muted">${emptyText}</p></div>`;
             } else {
                 filtered.forEach(n => {
-                    html += `<div onclick="navigate('${n.target}')" class="p-2.5 hover:bg-white/60 rounded-xl cursor-pointer flex gap-3 border border-transparent hover:border-white/50 relative">${!n.read ? '<span class="absolute top-3 right-3 w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}<div class="w-9 h-9 rounded-full ${n.bg} flex shrink-0 items-center justify-center border border-white"><i data-lucide="${n.icon}" class="w-[18px] h-[18px] ${n.color}"></i></div><div class="flex-1 min-w-0 pr-4"><p class="text-[12px] font-bold text-brand-navy mb-0.5">${n.title}</p><p class="text-[10px] text-brand-muted line-clamp-2">${n.desc}</p></div></div>`;
+                    html += `
+                        <div onclick="openNotificationDetail(${n.id}, event)" class="p-2.5 hover:bg-white/80 rounded-xl cursor-pointer flex gap-2.5 border ${!n.read ? 'bg-white/60 border-blue-200/80 shadow-2xs' : 'bg-white/25 border-transparent opacity-85'} hover:border-white transition-all relative group">
+                            ${!n.read ? '<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>' : ''}
+                            <div class="w-9 h-9 rounded-xl ${n.bg} flex shrink-0 items-center justify-center border border-white shadow-2xs">
+                                <i data-lucide="${n.icon}" class="w-[17px] h-[17px] ${n.color}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0 pr-4">
+                                <div class="flex items-center gap-1.5 mb-0.5">
+                                    <p class="text-[11.5px] ${!n.read ? 'font-extrabold text-brand-navy' : 'font-bold text-slate-700'} truncate">${n.title}</p>
+                                </div>
+                                <p class="text-[10px] text-brand-muted line-clamp-2 leading-relaxed">${n.desc}</p>
+                                <div class="flex items-center justify-between mt-1.5">
+                                    <span class="text-[9px] font-extrabold ${!n.read ? 'text-brand-blue' : 'text-emerald-600'} flex items-center gap-1">
+                                        <i data-lucide="${!n.read ? 'book-open' : 'check-check'}" class="w-2.5 h-2.5"></i>
+                                        ${!n.read ? 'Klik untuk baca detail' : 'Sudah dibaca'}
+                                    </span>
+                                    ${n.read ? `<button onclick="deleteSingleReadNotif(${n.id}, event)" class="text-[9px] font-bold text-red-500 hover:underline flex items-center gap-0.5" title="Hapus notifikasi ini"><i data-lucide="trash-2" class="w-2.5 h-2.5"></i> Hapus</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 });
             }
-            container.innerHTML = html;
+
+            document.querySelectorAll('.notif-items-list').forEach(container => {
+                container.innerHTML = html;
+            });
+
+            document.querySelectorAll('.notif-tab-semua').forEach(el => {
+                el.className = `notif-tab-semua flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${tab === 'semua' ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`;
+                el.innerHTML = `Semua (${unreadCount})`;
+            });
+            document.querySelectorAll('.notif-tab-belum').forEach(el => {
+                el.className = `notif-tab-belum flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${tab === 'belum_dibaca' ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`;
+                el.innerHTML = `Belum (${unreadCount})`;
+            });
+            document.querySelectorAll('.notif-tab-sudah').forEach(el => {
+                el.className = `notif-tab-sudah flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${tab === 'sudah_dibaca' ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`;
+                el.innerHTML = `Sudah Dibaca (${readCount})`;
+            });
+
+            window.updateNotifBadgesUI();
             if (window.lucide) lucide.createIcons();
-            const ts = document.getElementById('tab-semua'), tb = document.getElementById('tab-belum');
-            if (ts && tb) {
-                ts.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`;
-                tb.className = `flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${!isSemua ? 'bg-white shadow-sm text-brand-blue' : 'text-brand-muted hover:text-brand-navy'}`;
-            }
         };
 
         window.getNotifPopupHtml = function(idSuffix) {
-            const unreadCount = NOTIFICATIONS.filter(n=>!n.read).length;
-            return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[280px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/60"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/30"><span class="font-extrabold text-[13px] text-brand-navy">Notifikasi</span>${unreadCount > 0 ? `<span class="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">${unreadCount} Baru</span>` : ''}</div><div class="flex border-b border-white/30 bg-white/40 p-1"><button id="tab-semua" onclick="switchNotifTab('semua', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button id="tab-belum" onclick="switchNotifTab('belum_dibaca', event)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum Dibaca</button></div><div id="notif-items-container" class="p-2 flex flex-col gap-1 max-h-[280px] overflow-y-auto slider-scroll bg-white/20"></div></div>`;
+            const unreadCount = window.NOTIFICATIONS.filter(n => !n.read).length;
+            return `<div id="notif-popup${idSuffix}" onclick="event.stopPropagation()" class="glass-popup absolute ${idSuffix === '-mobile' ? 'right-0 top-[calc(100%+8px)]' : 'right-0 top-[calc(100%+12px)]'} w-[310px] glass-panel rounded-[24px] flex flex-col shadow-2xl origin-top-right z-50 overflow-hidden border border-white/80"><div class="px-4 py-3 border-b border-white/40 flex justify-between items-center bg-white/40"><span class="font-extrabold text-[13px] text-brand-navy flex items-center gap-1.5"><i data-lucide="bell-ring" class="w-3.5 h-3.5 text-brand-blue"></i> Pusat Notifikasi</span><span class="notif-unread-badge text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm ${unreadCount > 0 ? '' : 'hidden'}">${unreadCount} Baru</span></div><div class="flex gap-0.5 border-b border-white/30 bg-white/40 p-1"><button onclick="switchNotifTab('semua', event)" class="notif-tab-semua flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-white shadow-sm text-brand-blue">Semua</button><button onclick="switchNotifTab('belum_dibaca', event)" class="notif-tab-belum flex-1 py-1.5 text-[10px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Belum</button><button onclick="switchNotifTab('sudah_dibaca', event)" class="notif-tab-sudah flex-1 py-1.5 text-[10px] font-bold rounded-lg text-brand-muted hover:text-brand-navy">Sudah Dibaca</button></div><div class="notif-items-list p-2 flex flex-col gap-1.5 max-h-[300px] overflow-y-auto slider-scroll bg-white/30"></div></div>`;
         };
 
         // ============================================================================
@@ -2369,7 +2701,11 @@
                 </div>`;
 
             if (path === '#profil') {
-                if (!window.state.isLoggedIn) { window.navigate('#login'); return ''; }
+                if (!window.state.isLoggedIn) {
+                    window.state.path = '#login';
+                    window.location.hash = '#login';
+                    return window.renderNativeViews('#login');
+                }
                 const u = window.state.user;
                 const avatarUrl = u.avatar || window.getUserAvatarUrl(u.name);
                 const delegatedAppsBadges = (Array.isArray(u.adminApps) && u.adminApps.length > 0)
@@ -2398,15 +2734,39 @@
             }
             
             let currentFilter = path === '#edukasi' ? 'edukasi' : 'apps';
-            const visibleApps = window.DB.apps.filter(a => window.canUserSeeApp(a) && a.section === currentFilter);
+            const visibleApps = window.DB.apps.filter(a => {
+                const appSec = (String(a.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
+                return window.canUserSeeApp(a) && appSec === currentFilter;
+            });
             let appGridHTML = visibleApps.map(app => {
                 const isUserAppAdmin = window.state.isLoggedIn && window.state.user && (
                     window.state.user.role === 'Super Admin' ||
                     window.state.user.role === 'Admin' ||
                     (Array.isArray(window.state.user.adminApps) && window.state.user.adminApps.includes(app.id))
                 );
-                return `<div onclick="selectAppFromSlider2('${app.id}')" class="glass-panel rounded-[20px] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/50 active:scale-95 transition-all group shadow-sm"><div class="w-11 h-11 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><div class="flex items-center gap-1.5 mb-1"><h4 class="text-[13px] font-bold text-brand-navy leading-none truncate">${app.name}</h4>${isUserAppAdmin ? `<span class="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 shrink-0">ADMIN</span>` : ''}</div><p class="text-[10px] text-brand-muted leading-tight truncate">${app.cat}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`;
+                return `<div onclick="selectAppFromSlider2('${app.id}')" class="glass-panel rounded-[20px] p-3.5 flex items-center gap-3.5 cursor-pointer hover:bg-white/60 active:scale-95 transition-all group shadow-sm"><div class="w-12 h-12 rounded-[14px] ${app.bg} flex items-center justify-center shrink-0 border border-white group-hover:scale-110 transition-transform shadow-xs"><i data-lucide="${app.icon}" class="w-5 h-5 ${app.color}"></i></div><div class="flex-1 min-w-0 pr-1"><div class="flex items-center gap-1.5 mb-1"><h4 class="text-[13.5px] font-bold text-brand-navy leading-none truncate">${app.name}</h4>${isUserAppAdmin ? `<span class="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 shrink-0">ADMIN</span>` : ''}</div><p class="text-[10.5px] text-brand-muted leading-tight truncate">${app.cat || (currentFilter === 'edukasi' ? 'Karya & Edukasi' : 'Aplikasi Utama')}</p></div><i data-lucide="chevron-right" class="w-4 h-4 text-brand-muted/50 group-hover:text-brand-blue"></i></div>`;
             }).join('');
+
+            if (path === '#apps' || path === '#edukasi') {
+                return `
+                <div class="w-full h-full flex flex-col px-5 md:px-8 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4">
+                    <div class="glass-panel rounded-[24px] p-5 mb-4 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-[14px] ${path === '#edukasi' ? 'bg-orange-100 text-orange-500' : 'bg-blue-100 text-blue-500'} flex items-center justify-center border border-white shrink-0 shadow-xs">
+                                <i data-lucide="${path === '#edukasi' ? 'lightbulb' : 'layout-grid'}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-[18px] md:text-[20px] font-extrabold text-brand-navy leading-tight">${path === '#edukasi' ? 'Karya & Edukasi' : 'Daftar Aplikasi Utama'}</h1>
+                                <p class="text-[11px] text-brand-muted">${path === '#edukasi' ? 'Pilih karya siswa atau game edukasi untuk mulai menjelajah.' : 'Pilih layanan aplikasi integrasi SDIT Al Kautsar.'}</p>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-extrabold px-3 py-1 rounded-full bg-white/80 text-brand-blue border border-white shadow-xs shrink-0">${visibleApps.length} Item</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        ${appGridHTML || `<div class="col-span-full glass-panel rounded-[20px] p-8 text-center text-brand-muted text-[12px] font-bold">Belum ada daftar pada bagian ini.</div>`}
+                    </div>
+                </div>`;
+            }
 
             return `<div class="w-full h-full flex flex-col px-5 md:px-10 pb-6 overflow-y-auto animate-fade max-w-[1000px] mx-auto pt-4"><div class="glass-panel rounded-[28px] md:rounded-[32px] p-8 md:p-12 flex flex-col items-center justify-center text-center mb-5 relative transition-all duration-300"><div class="mb-3 w-16 h-16 rounded-2xl overflow-hidden shadow">${logoLargeSvg}</div><h2 class="text-[16px] font-bold text-brand-navy mb-1 tracking-wide">My Alka</h2><h1 class="text-[24px] md:text-[32px] font-extrabold text-brand-navy leading-tight tracking-tight mb-3">Selamat datang di My Alka</h1><p class="text-[13px] md:text-[14px] text-brand-muted max-w-[420px] leading-relaxed font-medium md:mb-0 mb-6">Ini adalah beranda portal My Alka. Silakan pilih menu di sebelah kiri atau buka aplikasi yang tersedia untuk memulai.</p><button onclick="navigate('#apps')" class="md:hidden bg-blue-500 hover:bg-blue-600 text-white font-bold text-[14px] rounded-full px-6 py-3 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">Jelajahi Portal <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors" onclick="navigate('#apps')"><div class="w-12 h-12 rounded-[16px] bg-blue-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="layout-grid" class="w-6 h-6 text-blue-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Aplikasi</h3><p class="text-[11px] text-brand-muted leading-tight">Akses berbagai layanan dan informasi.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div><div onclick="navigate('#edukasi')" class="glass-panel rounded-[24px] p-5 flex items-center gap-4 cursor-pointer hover:bg-white/60 transition-colors"><div class="w-12 h-12 rounded-[16px] bg-orange-100 flex items-center justify-center shrink-0 border border-white"><i data-lucide="lightbulb" class="w-6 h-6 text-orange-500"></i></div><div class="flex-1"><h3 class="text-[14px] font-bold text-brand-navy mb-0.5">Jelajahi Edukasi</h3><p class="text-[11px] text-brand-muted leading-tight">Temukan berbagai game & karya siswa.</p></div><div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-brand-muted shrink-0 border border-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></div></div></div><h2 class="text-[16px] font-extrabold text-brand-navy mb-3 ml-2">${path === '#edukasi' ? 'Semua Karya Edukasi' : 'Semua Aplikasi Utama'}</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${appGridHTML}</div></div>`;
         };
@@ -2495,30 +2855,32 @@
                 return `<a onclick="navigate('${m.hash}')" class="nav-item ${isActiveMenu ? 'active' : ''}"><div class="nav-indicator"></div><i data-lucide="${m.icon}" class="w-5 h-5"></i><span class="text-[10px]">${m.name}</span></a>`;
             }).join('');
 
+            const unreadNotifCount = window.NOTIFICATIONS.filter(n => !n.read).length;
+
             return `
             <div class="flex h-[100dvh] w-full overflow-hidden relative">
-                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-4 cursor-pointer" onclick="navigate('#home')"><div class="w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0">${logoSvg}</div> <span class="text-[15px] font-bold text-brand-navy tracking-tight">My Alka</span></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav>${sidebarAdminShortcuts}</aside>` : ''}
+                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center justify-between px-3.5 cursor-pointer" onclick="navigate('#home')"><div class="flex items-center gap-2 min-w-0"><div class="w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0">${logoSvg}</div><span class="text-[14px] font-extrabold text-brand-navy tracking-tight truncate">My Alka</span></div>${macOsDotsHtml}</div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav>${sidebarAdminShortcuts}</aside>` : ''}
                 
                 <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile && !isDirectApp && window.state.path !== '#login' ? 'pb-[70px]' : ''}">
                     ${isMobile ? `
                     <header class="h-[56px] flex items-center justify-between px-4 shrink-0 z-30 sticky top-0 ${isDirectApp ? 'bg-white/40 backdrop-blur-xl border-b border-white/50' : 'bg-transparent pt-2'} w-full">
-                        ${isDirectApp ? `<button onclick="navigate('#${currentSection}')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px] glass-pill px-3 py-1.5 rounded-full shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i> Aplikasi</button><span class="ml-3 font-bold text-[13px] text-brand-navy truncate">${currentTitle}</span>${window.getZoomControls(true)}` 
-                        : `<div class="flex items-center gap-3 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[11px] text-brand-muted font-medium mb-1 leading-none">${window.state.isLoggedIn ? 'Halo,' : 'SDIT Al Kautsar'}</span><span class="text-[13px] font-extrabold text-brand-navy leading-none truncate">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div class="flex items-center gap-2">${isAdminUser ? `<button onclick="navigate('#admin-dashboard')" class="bg-blue-600 text-white text-[11px] font-extrabold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1"><i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> Panel Admin</button>` : ''}<button onclick="togglePopup('notif-popup-mobile', event)" class="w-[38px] h-[38px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[18px] h-[18px] text-brand-navy"></i><span class="absolute top-[10px] right-[10px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
+                        ${isDirectApp ? `<button onclick="navigate('#${currentSection}')" class="flex items-center gap-1.5 text-brand-navy font-bold text-[13px] glass-pill px-3 py-1.5 rounded-full shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i> Aplikasi</button><span class="ml-2 font-bold text-[13px] text-brand-navy truncate flex-1">${currentTitle}</span><div class="flex items-center gap-1.5 relative">${window.getZoomControls(true)}<button onclick="togglePopup('notif-popup-mobile', event)" class="w-[34px] h-[34px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="notif-bell-dot absolute top-[8px] right-[8px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white ${unreadNotifCount > 0 ? '' : 'hidden'}"></span></button>${window.getNotifPopupHtml('-mobile')}</div>` 
+                        : `<div class="flex items-center gap-2.5 relative cursor-pointer" onclick="togglePopup('profile-popup-mobile', event)"><div class="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm bg-blue-100 flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><div class="flex items-center gap-1.5 mb-0.5">${macOsDotsHtml}<span class="text-[10px] text-brand-muted font-semibold leading-none">${window.state.isLoggedIn ? 'Halo,' : 'My Alka'}</span></div><span class="text-[12.5px] font-extrabold text-brand-navy leading-none truncate max-w-[115px]">${profileName} 👋</span></div>${window.getProfilePopupHtml('-mobile')}</div><div class="flex items-center gap-1.5 relative">${isAdminUser ? `<button onclick="navigate('#admin-dashboard')" class="bg-blue-600 text-white text-[10.5px] font-extrabold px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1"><i data-lucide="shield-alert" class="w-3 h-3"></i> Admin</button>` : ''}${window.getZoomControls(true)}<button onclick="togglePopup('notif-popup-mobile', event)" class="w-[34px] h-[34px] rounded-full glass-pill flex items-center justify-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="notif-bell-dot absolute top-[8px] right-[8px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white ${unreadNotifCount > 0 ? '' : 'hidden'}"></span></button>${window.getNotifPopupHtml('-mobile')}</div>`}
                     </header>` : `
                     <header class="h-[60px] flex items-center px-6 shrink-0 z-30 bg-transparent w-full relative">
-                        ${isIframe ? window.getZoomControls(false) : ''}
-                        <div class="relative w-full max-w-[320px] ${isIframe ? 'ml-4' : ''}">
+                        <div class="relative w-full max-w-[320px]">
                             <div class="glass-pill w-full h-[36px] rounded-full flex items-center px-4 border border-white/80 shadow-sm"><i data-lucide="search" class="w-[16px] h-[16px] text-brand-muted mr-2"></i><input type="text" oninput="doSearch(this.value)" placeholder="Cari aplikasi..." class="bg-transparent border-none outline-none text-[12px] font-medium w-full text-brand-navy"></div>
                             <div id="search-dropdown" class="hidden absolute top-[calc(100%+8px)] left-0 right-0 glass-panel rounded-2xl shadow-xl border border-white/60 overflow-hidden z-50"><div class="px-4 py-2 border-b border-white/30 bg-white/20"><span class="text-[11px] font-bold text-brand-muted uppercase">Hasil</span></div><div id="search-results-list" class="max-h-[300px] overflow-y-auto slider-scroll flex flex-col bg-white/10 p-1"></div></div>
                         </div>
-                        <div class="flex items-center gap-2.5 ml-auto relative">
+                        <div class="flex items-center gap-2 ml-auto relative">
                             ${isAdminUser ? `
-                                <button onclick="navigate('#admin-dashboard')" class="bg-blue-600 hover:bg-blue-700 text-white h-[36px] px-3.5 rounded-full text-[11.5px] font-extrabold shadow-sm flex items-center gap-1.5 transition-all" title="Buka Panel Admin My Alka">
+                                <button onclick="navigate('#admin-dashboard')" class="bg-blue-600 hover:bg-blue-700 text-white h-[34px] px-3.5 rounded-full text-[11.5px] font-extrabold shadow-sm flex items-center gap-1.5 transition-all" title="Buka Panel Admin My Alka">
                                     <i data-lucide="shield-alert" class="w-4 h-4"></i> Panel Admin
                                 </button>
                             ` : ''}
-                            <div class="relative"><button onclick="togglePopup('notif-popup-desktop', event)" class="w-[36px] h-[36px] rounded-full glass-pill flex justify-center items-center shadow-sm relative"><i data-lucide="bell" class="w-[16px] h-[16px] text-brand-navy"></i><span class="absolute top-[8px] right-[9px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white"></span></button>${window.getNotifPopupHtml('-desktop')}</div>
-                            <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[38px] pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[10px] font-extrabold text-brand-navy truncate max-w-[110px]">${profileName}</span><span class="text-[8.5px] font-semibold text-brand-muted truncate max-w-[110px]">${profileSub}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
+                            ${window.getZoomControls(false)}
+                            <div class="relative"><button onclick="togglePopup('notif-popup-desktop', event)" class="w-[34px] h-[34px] rounded-full glass-pill flex justify-center items-center shadow-sm relative"><i data-lucide="bell" class="w-[15px] h-[15px] text-brand-navy"></i><span class="notif-bell-dot absolute top-[7px] right-[8px] w-[6px] h-[6px] bg-orange-500 rounded-full border border-white ${unreadNotifCount > 0 ? '' : 'hidden'}"></span></button>${window.getNotifPopupHtml('-desktop')}</div>
+                            <div class="relative"><button onclick="togglePopup('profile-popup-desktop', event)" class="h-[36px] pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full glass-pill shadow-sm"><div class="w-7 h-7 rounded-full bg-blue-100 overflow-hidden border border-white flex items-center justify-center shrink-0">${window.state.isLoggedIn ? `<img src="${window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name)}" class="w-full h-full object-cover">` : '<div class="w-full h-full overflow-hidden flex items-center justify-center"><img src="./MyAlka.png" class="w-full h-full object-cover"></div>'}</div><div class="flex flex-col text-left"><span class="text-[10px] font-extrabold text-brand-navy truncate max-w-[110px]">${profileName}</span><span class="text-[8.5px] font-semibold text-brand-muted truncate max-w-[110px]">${profileSub}</span></div><i data-lucide="chevron-down" class="w-[12px] h-[12px] text-brand-muted"></i></button>${window.getProfilePopupHtml('-desktop')}</div>
                         </div>
                     </header>`}
                     
@@ -2596,6 +2958,351 @@
                     <div class="glass-panel p-5 rounded-[24px]">
                         <div class="flex justify-between items-center border-b border-white/40 pb-3 mb-4"><h3 class="text-[14px] font-bold text-brand-navy">Aktivitas Terbaru</h3><button onclick="navigate('#admin-logs')" class="text-[10px] font-bold text-brand-blue">Semua</button></div>
                         <div class="flex flex-col gap-3.5">${window.DB.logs.slice(0,4).map(l => `<div class="flex items-start gap-3 relative"><div class="w-2 h-2 mt-1 rounded-full bg-${l.color}-500 shrink-0"></div><div><p class="text-[11px] font-semibold text-brand-navy leading-tight">${l.action} <span class="font-bold text-brand-blue">${l.target}</span></p><p class="text-[9px] text-brand-muted mt-0.5">${l.time} oleh ${l.user}</p></div></div>`).join('')}</div>
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        // ============================================================================
+        // MANAJEMEN MENU PORTAL & DAFTAR APLIKASI (#admin-menu-apps)
+        // ============================================================================
+        window.triggerAppSearch = function(val) { window.state.searchQueryApp = val.toLowerCase(); window.render(); };
+        window.renderAdminMenuApps = function() {
+            const rowsMenu = window.DB.menus.sort((a,b) => a.order - b.order).map(m => {
+                if (String(window.state.editingMenuId) === String(m.id)) {
+                    return `<tr class="border-b border-white/30 bg-white/40"><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white/80 flex items-center justify-center text-brand-muted"><i data-lucide="grip-vertical" class="w-4 h-4"></i></div><span class="text-[11px] font-bold ml-1">${m.order}</span></div></td><td class="py-2.5 px-3"><input type="text" id="editMenuName-${m.id}" value="${m.name}" class="input-glass font-bold"></td><td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-3 h-3 text-blue-500"></i></div><input type="text" id="editMenuIcon-${m.id}" value="${m.icon}" class="input-glass w-24"></div></td><td class="py-2.5 px-3"><input type="url" id="editMenuUrl-${m.id}" value="${m.url || ''}" ${m.type !== 'iframe' ? 'disabled placeholder="Grup Aplikasi"' : ''} class="input-glass min-w-[200px]"></td><td class="py-2.5 px-3"><span class="text-[11px] font-bold text-brand-muted bg-white/50 px-2 py-1 rounded">Edit Mode</span></td><td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveMenuInline('${m.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditMenu()" class="w-7 h-7 rounded-lg bg-white text-red-500 flex items-center justify-center shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button></div></td></tr>`;
+                } else {
+                    return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${m.id}', 'menu')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${m.id}', 'menu')" ondragend="handleDragEnd(event)"><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><span class="text-[12px] font-bold">${m.order}</span></div></td><td class="py-3 px-3 font-bold text-[13px] text-brand-navy">${m.name}</td><td class="py-3 px-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-blue-50 border border-white flex items-center justify-center"><i data-lucide="${m.icon}" class="w-4 h-4 text-blue-500"></i></div><span class="text-[11px] font-bold text-brand-muted hidden md:inline">${m.icon}</span></div></td><td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[250px]" title="${m.url}">${m.type === 'iframe' ? `<a href="${m.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${m.url}</a>` : 'Grup (Kumpulan Aplikasi)'}</div></td><td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${m.visible ? 'checked' : ''} onchange="toggleMenuVisibility('${m.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td><td class="py-3 px-3 text-right"><button onclick="startEditMenu('${m.id}')" class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button></td></tr>`;
+                }
+            }).join('');
+
+            const filteredApps = window.DB.apps.filter(a => (a.name || '').toLowerCase().includes(window.state.searchQueryApp) || (a.cat || '').toLowerCase().includes(window.state.searchQueryApp));
+            const generateAppRows = (appsList, typeKey) => {
+                return appsList.map(app => {
+                    const roles = Array.isArray(app.roles) ? app.roles : ['Umum'];
+                    const isUmum = roles.includes('Umum');
+                    const isAdminRole = roles.includes('Admin');
+                    const isPegawai = roles.includes('Pegawai');
+                    const isWarid = roles.includes('Warid');
+
+                    if (String(window.state.editingAppId) === String(app.id)) {
+                        const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+                        return `<tr class="border-b border-white/30 bg-white/60">
+                            <td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-20 px-1.5"></div></td>
+                            <td class="py-2.5 px-3">
+                                <input type="text" id="editAppName-${app.id}" value="${app.name}" placeholder="Nama Aplikasi" class="input-glass font-bold w-full min-w-[120px] mb-1">
+                                <div class="flex gap-1">
+                                    <input type="text" id="editAppCat-${app.id}" value="${app.cat || ''}" placeholder="Kategori" class="input-glass text-[10px] p-1 flex-1">
+                                    <select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1 w-28">
+                                        <option value="apps" ${app.section !== 'edukasi' ? 'selected' : ''}>Aplikasi Utama</option>
+                                        <option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Karya & Edukasi</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass text-[11px] w-full min-w-[180px]"></td>
+                            <td class="py-2.5 px-3"><select id="editAppColor-${app.id}" class="input-glass text-[11px] p-1">${colorOptions}</select></td>
+                            <td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Umum-${app.id}" ${isUmum ? 'checked' : ''} onchange="toggleUmumInline('${app.id}')" class="w-4 h-4 cursor-pointer accent-blue-600"></td>
+                            <td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Admin-${app.id}" ${isAdminRole ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer accent-indigo-600"></td>
+                            <td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Pegawai-${app.id}" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer accent-emerald-600"></td>
+                            <td class="py-2.5 px-3 text-center"><input type="checkbox" id="editAppRole-Warid-${app.id}" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''} class="w-4 h-4 cursor-pointer accent-amber-600"></td>
+                            <td class="py-2.5 px-3"><span class="text-[10px] font-bold text-brand-muted bg-white/70 px-2 py-1 rounded">Edit</span></td>
+                            <td class="py-2.5 px-3 text-right"><div class="flex justify-end gap-1"><button onclick="saveAppInline('${app.id}')" class="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-sm" title="Simpan"><i data-lucide="check" class="w-4 h-4"></i></button><button onclick="cancelEditApp()" class="w-7 h-7 rounded-lg bg-white text-slate-500 flex items-center justify-center shadow-sm border border-slate-200" title="Batal"><i data-lucide="x" class="w-4 h-4"></i></button></div></td>
+                        </tr>`;
+                    } else {
+                        return `<tr class="draggable-row border-b border-white/30 hover:bg-white/20 transition-colors" ondragstart="handleDragStart(event, '${app.id}', '${typeKey}')" ondragover="return handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="return handleDrop(event, '${app.id}', '${typeKey}')" ondragend="handleDragEnd(event)">
+                            <td class="py-3 px-3"><div class="flex items-center gap-2"><div class="grip-handle w-6 h-6 rounded bg-white/40 flex items-center justify-center text-brand-muted" onmousedown="enableDrag(this)" onmouseup="disableDrag(this)" onmouseleave="disableDrag(this)" title="Tahan klik untuk menggeser urutan"><i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i></div><div class="w-7 h-7 rounded-lg ${app.bg} flex items-center justify-center shrink-0 border border-white"><i data-lucide="${app.icon}" class="w-4 h-4 ${app.color}"></i></div></div></td>
+                            <td class="py-3 px-3"><div class="font-bold text-[13px] text-brand-navy">${app.name}</div><div class="text-[9.5px] text-brand-muted">${app.cat || '-'}</div></td>
+                            <td class="py-3 px-3"><div class="text-[11px] text-brand-muted truncate max-w-[200px]" title="${app.url}"><a href="${app.url}" target="_blank" class="text-blue-500 hover:underline"><i data-lucide="link" class="w-3 h-3 inline"></i> ${app.url}</a></div></td>
+                            <td class="py-3 px-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${app.bg} ${app.color} border border-white capitalize">${(app.color || '').replace('text-','').replace('-500','')}</span></td>
+                            <td class="py-3 px-3 text-center"><input type="checkbox" ${isUmum ? 'checked' : ''} onchange="toggleAppRoleDirect('${app.id}', 'Umum', this.checked)" class="w-4 h-4 cursor-pointer accent-blue-600" title="Tampil untuk Umum"></td>
+                            <td class="py-3 px-3 text-center"><input type="checkbox" ${isAdminRole ? 'checked' : ''} ${isUmum ? 'disabled' : ''} onchange="toggleAppRoleDirect('${app.id}', 'Admin', this.checked)" class="w-4 h-4 cursor-pointer accent-indigo-600 ${isUmum ? 'opacity-40 cursor-not-allowed' : ''}" title="Khusus Admin"></td>
+                            <td class="py-3 px-3 text-center"><input type="checkbox" ${isPegawai ? 'checked' : ''} ${isUmum ? 'disabled' : ''} onchange="toggleAppRoleDirect('${app.id}', 'Pegawai', this.checked)" class="w-4 h-4 cursor-pointer accent-emerald-600 ${isUmum ? 'opacity-40 cursor-not-allowed' : ''}" title="Khusus Pegawai"></td>
+                            <td class="py-3 px-3 text-center"><input type="checkbox" ${isWarid ? 'checked' : ''} ${isUmum ? 'disabled' : ''} onchange="toggleAppRoleDirect('${app.id}', 'Warid', this.checked)" class="w-4 h-4 cursor-pointer accent-amber-600 ${isUmum ? 'opacity-40 cursor-not-allowed' : ''}" title="Khusus Warid/Siswa"></td>
+                            <td class="py-3 px-3"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" ${app.status !== false ? 'checked' : ''} onchange="toggleAppStatus('${app.id}')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div></label></td>
+                            <td class="py-3 px-3 text-right">
+                                <div class="flex justify-end gap-1">
+                                    <button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-white flex items-center justify-center text-brand-blue border border-white shadow-sm inline-flex" onclick="startEditApp('${app.id}')" title="Edit Aplikasi"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                                    <button class="w-7 h-7 rounded-lg bg-white/60 hover:bg-red-50 flex items-center justify-center text-red-500 border border-white shadow-sm inline-flex" onclick="confirmDeleteApp('${app.id}')" title="Hapus Aplikasi"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    }
+                }).join('');
+            };
+
+            const appsUtamaList = filteredApps.filter(a => (String(a.section || '').toLowerCase().trim() === 'edukasi' ? 'edukasi' : 'apps') === 'apps');
+            const appsEdukasiList = filteredApps.filter(a => (String(a.section || '').toLowerCase().trim() === 'edukasi' ? 'edukasi' : 'apps') === 'edukasi');
+
+            const trsApps = generateAppRows(appsUtamaList, 'app');
+            const trsEdukasi = generateAppRows(appsEdukasiList, 'edukasi');
+            const theadTemplate = `<thead class="bg-white/40 border-b border-white/50"><tr><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Ikon</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Aplikasi</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[190px]">Tautan (URL)</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Warna</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-center w-[65px]">Umum</th><th class="py-2.5 px-3 text-[10px] font-bold text-indigo-600 uppercase text-center w-[65px]">Admin</th><th class="py-2.5 px-3 text-[10px] font-bold text-emerald-600 uppercase text-center w-[65px]">Pegawai</th><th class="py-2.5 px-3 text-[10px] font-bold text-amber-600 uppercase text-center w-[65px]">Warid</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[70px]">Status</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[85px]">Aksi</th></tr></thead>`;
+            
+            return `<div class="p-4 md:p-6 w-full h-full flex flex-col overflow-y-auto slider-scroll box-border">
+                <div class="glass-panel p-4 rounded-[20px] flex flex-col lg:flex-row lg:items-center justify-between mb-5 gap-3 shrink-0">
+                    <div>
+                        <h1 class="text-[18px] font-extrabold text-brand-navy">Menu & Aplikasi</h1>
+                        <p class="text-[11px] text-brand-muted mt-0.5">Aplikasi pada Tabel Daftar Aplikasi Utama tampil di menu <strong>Aplikasi</strong>, sedangkan Tabel Daftar Karya & Edukasi tampil di menu <strong>Edukasi</strong>.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="relative w-full sm:w-[200px]"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerAppSearch(this.value)" placeholder="Cari aplikasi/karya..." value="${window.state.searchQueryApp}" class="input-glass pl-8 py-1.5"></div>
+                        <button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data</button>
+                    </div>
+                </div>
+
+                <div class="mb-6 shrink-0">
+                    <h2 class="text-[14px] font-extrabold text-brand-navy mb-2 ml-2 flex items-center gap-2"><i data-lucide="menu" class="w-4 h-4 text-brand-blue"></i> Tabel Menu Utama Portal</h2>
+                    <div class="glass-panel rounded-[20px] overflow-hidden w-full">
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead class="bg-white/40 border-b border-white/50"><tr><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Urutan</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Nama Menu</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase">Ikon</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase min-w-[200px]">Tautan (URL)</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase w-[80px]">Tampil</th><th class="py-2.5 px-3 text-[10px] font-bold text-brand-muted uppercase text-right w-[70px]">Aksi</th></tr></thead>
+                                <tbody>${rowsMenu}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 mx-2 gap-3 shrink-0 mt-2">
+                    <h2 class="text-[14px] font-extrabold text-brand-navy flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand-blue"></i> Tabel Daftar Aplikasi Utama (Tampil di Slider Aplikasi)</h2>
+                    <button onclick="showAddAppModal('apps')" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Aplikasi Utama</button>
+                </div>
+                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-6 w-full">
+                    <div class="overflow-x-auto slider-scroll w-full">
+                        <table class="w-full text-left border-collapse min-w-[1100px]">${theadTemplate}<tbody>${trsApps}</tbody></table>
+                        ${appsUtamaList.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada aplikasi utama ditemukan.</div>' : ''}
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 mx-2 gap-3 shrink-0 mt-2">
+                    <h2 class="text-[14px] font-extrabold text-brand-navy flex items-center gap-2"><i data-lucide="lightbulb" class="w-4 h-4 text-orange-500"></i> Tabel Daftar Karya & Edukasi (Tampil di Slider Edukasi)</h2>
+                    <button onclick="showAddAppModal('edukasi')" class="bg-orange-500 hover:bg-orange-600 text-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Karya & Edukasi</button>
+                </div>
+                <div class="glass-panel rounded-[20px] overflow-hidden flex flex-col shrink-0 mb-8 w-full">
+                    <div class="overflow-x-auto slider-scroll w-full">
+                        <table class="w-full text-left border-collapse min-w-[1100px]">${theadTemplate}<tbody>${trsEdukasi}</tbody></table>
+                        ${appsEdukasiList.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada karya/edukasi ditemukan.</div>' : ''}
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        // ============================================================================
+        // DATA PEGAWAI & GURU (#admin-guru)
+        // ============================================================================
+        const GURU_BIODATA_KEYS = ['nama', 'namaGelar', 'password', 'nik', 'nbm', 'jk', 'tempatLahir', 'tanggalLahir', 'provinsi', 'kabupaten', 'kecamatan', 'desa', 'alamatDetail', 'noWa', 'jenisKepegawaian', 'statusKepegawaian', 'pendidikanTerakhir', 'ptTerakhir', 'ptProvinsi', 'ptKabupaten', 'ptKecamatan', 'ptDesa', 'ptAlamatDetail', 'prodi', 'tahunMasuk', 'tahunLulus', 'ayahNama', 'ayahTahun', 'ayahNik', 'ayahPendidikan', 'ibuNama', 'ibuTahun', 'ibuNik', 'ibuPendidikan', 'linkKk', 'linkIjazah'];
+
+        window.downloadFormatGuru = function() {
+            const headers = GURU_BIODATA_KEYS.map(k => k.replace(/([A-Z])/g, '_$1').toUpperCase());
+            const rows = window.DB.guru.map(g => GURU_BIODATA_KEYS.map(k => k === 'password' ? (g.password || DEFAULT_PASSWORD) : (g[k] || '')));
+            window.exportPremiumExcel({
+                sheetName: "MasterPegawai",
+                fileName: "Format_Master_Pegawai.xlsx",
+                headers: headers,
+                rows: rows,
+                centerCols: [2, 3, 4, 5, 7, 13, 14, 15, 16, 24, 25, 27, 28, 31, 32],
+                boldCols: [0, 2],
+                getHeaderColor: (colIdx) => {
+                    if (colIdx <= 4) return '0F172A';
+                    if (colIdx <= 13) return '334155';
+                    if (colIdx <= 25) return '1E40AF';
+                    if (colIdx <= 33) return 'B45309';
+                    return '047857';
+                }
+            });
+        };
+
+        window.triggerUploadGuru = function() { document.getElementById('fileGuru').click(); };
+        window.handleUploadGuru = function(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                json.forEach((row, i) => {
+                    const rowNik = String(row['NIK'] || '').trim();
+                    const rowNama = String(row['NAMA'] || '').trim();
+                    let existing = window.DB.guru.find(x => (rowNik && String(x.nik) === rowNik) || (rowNama && x.nama.toLowerCase() === rowNama.toLowerCase()));
+                    let g = existing || { id: Date.now() + i, password: DEFAULT_PASSWORD, status: true, waliKelas: '', tugasTambahan: '', pelatihEkstra: '', mapel1: '', kelasMapel1: '', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '' };
+                    GURU_BIODATA_KEYS.forEach(k => {
+                        const header = k.replace(/([A-Z])/g, '_$1').toUpperCase();
+                        if (row[header] !== undefined) {
+                            if (k === 'tanggalLahir') g[k] = window.formatDateId(row[header]);
+                            else if (k === 'password') g[k] = String(row[header] || DEFAULT_PASSWORD).trim() || DEFAULT_PASSWORD;
+                            else g[k] = row[header];
+                        }
+                    });
+                    if (!g.password) g.password = DEFAULT_PASSWORD;
+                    if (!existing) window.DB.guru.push(g);
+                });
+                window.syncUsersWithGuru();
+                window.showToast(json.length + ' Data Pegawai Diimpor!');
+                window.logActivity('Import Excel Pegawai', json.length + ' Baris', 'Pegawai', 'blue');
+                window.render();
+                document.getElementById('fileGuru').value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        window.showEditGuru = function(id) {
+            const g = id ? window.DB.guru.find(x => x.id === id) : { password: DEFAULT_PASSWORD };
+            const isNew = !id;
+            let formHtml = `
+                <div class="mb-4 border-b border-gray-200 pb-3">
+                    <h2 class="text-lg font-extrabold text-brand-navy">${isNew ? 'Tambah' : 'Edit'} Biodata Pegawai</h2>
+                    <p class="text-[11px] text-brand-muted">Isi data induk kepegawaian & password login. Untuk penugasan (Wali Kelas, Mapel, Ekstra) diatur pada menu Tugas Pegawai.</p>
+                </div>
+                <form id="guruForm" onsubmit="saveEditGuru(event, ${id || 'null'})" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto slider-scroll p-1 pr-3">`;
+            GURU_BIODATA_KEYS.forEach(key => {
+                const label = key.replace(/([A-Z])/g, ' $1').toUpperCase();
+                const val = key === 'password' ? (g.password || DEFAULT_PASSWORD) : (g[key] || '');
+                formHtml += `<div class="flex flex-col gap-1"><label class="text-[10px] font-bold text-brand-muted">${label}</label><input type="text" id="g_${key}" value="${val}" ${key === 'nama' ? 'required' : ''} class="input-glass" placeholder="${label}"></div>`;
+            });
+            formHtml += `</form>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
+                    <button type="submit" form="guruForm" class="px-5 py-2 text-xs font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600">Simpan Biodata</button>
+                </div>`;
+            window.openModal(formHtml);
+        };
+
+        window.saveEditGuru = function(e, id) {
+            e.preventDefault();
+            let g = id ? window.DB.guru.find(x => x.id === id) : { id: Date.now(), password: DEFAULT_PASSWORD, status: true, waliKelas: '', tugasTambahan: '', pelatihEkstra: '', mapel1: '', kelasMapel1: '', mapel2: '', kelasMapel2: '', mapel3: '', kelasMapel3: '', mapel4: '', kelasMapel4: '', mapel5: '', kelasMapel5: '', mapel6: '', kelasMapel6: '' };
+            GURU_BIODATA_KEYS.forEach(k => { g[k] = document.getElementById('g_' + k).value; });
+            if (!g.password) g.password = DEFAULT_PASSWORD;
+            if (!id) window.DB.guru.push(g);
+            window.syncUsersWithGuru();
+            window.logActivity(id ? 'Edit Biodata Pegawai' : 'Tambah Pegawai Baru', g.nama, 'Pegawai', 'blue');
+            window.showToast('Biodata Pegawai Tersimpan!');
+            window.closeModal();
+            window.render();
+        };
+
+        window.triggerGuruSearch = function(val) { window.state.searchQueryGuru = val.toLowerCase(); window.render(); };
+
+        window.renderAdminGuru = function() {
+            const filteredGuru = window.DB.guru.filter(g => (g.nama && g.nama.toLowerCase().includes(window.state.searchQueryGuru)) || (g.nik && String(g.nik).includes(window.state.searchQueryGuru)) || (g.nbm && String(g.nbm).includes(window.state.searchQueryGuru)));
+            const trs = filteredGuru.map((g, idx) => {
+                const pwd = g.password || DEFAULT_PASSWORD;
+                const isDefaultPwd = pwd === DEFAULT_PASSWORD;
+                return `
+                <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors bg-white">
+                    <td class="py-3 px-3 whitespace-nowrap sticky-col-1 text-center text-[11px] font-bold text-brand-muted w-[60px] min-w-[60px]">${idx + 1}</td>
+                    <td class="py-3 px-4 whitespace-nowrap sticky-col-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center border border-white text-blue-500 shrink-0"><i data-lucide="briefcase" class="w-3.5 h-3.5"></i></div>
+                            <div>
+                                <div class="font-bold text-[13px] text-brand-navy">${g.nama || '-'} <span class="text-[10px] font-semibold text-brand-muted ml-1">${g.namaGelar || ''}</span></div>
+                                <div class="text-[9.5px] text-brand-muted font-mono leading-tight mt-0.5">NIK: <span class="font-bold">${g.nik || '-'}</span> <span class="mx-1.5">•</span> NBM: <span class="font-bold">${g.nbm || '-'}</span></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap text-center">
+                        <span class="font-mono text-[11px] font-bold px-2 py-0.5 rounded border ${isDefaultPwd ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">${pwd}</span>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[12px] font-bold text-brand-navy text-center">${g.jk || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-navy">${g.tempatLahir || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.tanggalLahir)}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.provinsi || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.kabupaten || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.kecamatan || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.desa || '-'}</td>
+                    <td class="py-3 px-4 text-[11px] text-brand-muted min-w-[200px] truncate max-w-[250px]" title="${g.alamatDetail || ''}">${g.alamatDetail || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono font-bold text-brand-blue"><i data-lucide="phone" class="w-3 h-3 inline mr-1 text-green-500"></i>${g.noWa || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.jenisKepegawaian || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-center"><span class="text-[10px] font-bold px-2 py-1 rounded bg-green-50 text-green-600 border border-green-100">${g.statusKepegawaian || '-'}</span></td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-extrabold text-brand-navy">${g.pendidikanTerakhir || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-navy font-semibold">${g.ptTerakhir || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptProvinsi || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptKabupaten || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptKecamatan || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ptDesa || '-'}</td>
+                    <td class="py-3 px-4 text-[11px] text-brand-muted min-w-[200px] truncate max-w-[250px]" title="${g.ptAlamatDetail || ''}">${g.ptAlamatDetail || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.prodi || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${g.tahunMasuk || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-navy font-bold text-center">${g.tahunLulus || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.ayahNama || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.ayahTahun)}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted">${g.ayahNik || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ayahPendidikan || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-bold text-brand-navy">${g.ibuNama || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted text-center">${formatDateId(g.ibuTahun)}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] font-mono text-brand-muted">${g.ibuNik || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-[11px] text-brand-muted">${g.ibuPendidikan || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-center"><a href="${g.linkKk || '#'}" target="_blank" class="text-blue-500 hover:text-blue-700 mx-auto block w-fit p-1 bg-blue-50 rounded" title="Lihat KK"><i data-lucide="file-text" class="w-4 h-4"></i></a></td>
+                    <td class="py-3 px-4 whitespace-nowrap text-center"><a href="${g.linkIjazah || '#'}" target="_blank" class="text-blue-500 hover:text-blue-700 mx-auto block w-fit p-1 bg-blue-50 rounded" title="Lihat Ijazah"><i data-lucide="graduation-cap" class="w-4 h-4"></i></a></td>
+                    <td class="py-3 px-4 whitespace-nowrap text-center"><div class="w-2 h-2 rounded-full ${g.status !== false ? 'bg-green-500' : 'bg-red-500'} mx-auto"></div></td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap sticky right-0 bg-white shadow-[-2px_0_5px_rgba(0,0,0,0.04)] z-20 border-l border-slate-200">
+                        <button class="w-7 h-7 rounded-lg bg-white hover:bg-gray-50 flex items-center justify-center text-brand-blue border border-gray-200 shadow-sm inline-flex" onclick="showEditGuru(${g.id})" title="Edit Biodata Pegawai"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            return `
+            <div class="p-4 md:p-6 w-full h-full flex flex-col box-border relative">
+                <div class="glass-panel p-4 rounded-[20px] flex flex-col xl:flex-row xl:items-center justify-between mb-5 gap-3 shrink-0 relative z-40">
+                    <div>
+                        <h1 class="text-[18px] font-extrabold text-brand-navy">Buku Induk Pegawai & Guru</h1>
+                        <p class="text-[11px] text-brand-muted mt-0.5">Validasi identitas, password login, pendidikan, dan orang tua pegawai.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="relative w-full md:w-[180px] mr-2">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i>
+                            <input type="text" oninput="triggerGuruSearch(this.value)" placeholder="Cari NIK/Nama..." value="${window.state.searchQueryGuru}" class="input-glass pl-8 py-1.5">
+                        </div>
+                        <button onclick="triggerUploadGuru()" class="bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Upload Master</button>
+                        <button onclick="downloadFormatGuru()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Unduh Format</button>
+                        <button onclick="showEditGuru()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 ml-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button>
+                        <button onclick="globalSave()" class="bg-brand-navy hover:bg-black text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 ml-1"><i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan</button>
+                    </div>
+                </div>
+                
+                <div class="glass-panel rounded-[20px] flex-1 overflow-hidden flex flex-col w-full relative z-10 shadow-sm border border-white">
+                    <div class="overflow-x-auto overflow-y-auto slider-scroll flex-1 w-full bg-white">
+                        <table class="w-full text-left border-collapse min-w-[3350px]">
+                            <thead>
+                                <tr>
+                                    <th class="py-2.5 px-3 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-col-1-header text-center w-[60px] min-w-[60px]">NO</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-col-2-header">NAMA PEGAWAI</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fef3c7]">PASSWORD</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">L / P</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">TEMPAT LAHIR</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">TANGGAL LAHIR</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">PROVINSI</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">KABUPATEN</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">KECAMATAN</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">DESA</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">ALAMAT DETAIL</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#f1f5f9]">NO. WHATSAPP</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">JENIS KEPEG.</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">STATUS</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PEND. TERAKHIR</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PT TERAKHIR</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PROV. PT</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">KAB. PT</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">KEC. PT</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">DESA PT</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">ALAMAT PT DETAIL</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#cbd5e1]">PRODI</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">THN MASUK</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#cbd5e1]">THN LULUS</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NAMA AYAH</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fed7aa]">THN AYAH</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NIK AYAH</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">PEND. AYAH</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NAMA IBU</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#fed7aa]">THN IBU</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">NIK IBU</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap sticky-top-th bg-[#fed7aa]">PEND. IBU</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#a7f3d0]">LINK KK</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#a7f3d0]">LINK IJAZAH</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase whitespace-nowrap text-center sticky-top-th bg-[#f1f5f9]">AKTIF</th>
+                                    <th class="py-2.5 px-4 text-[10px] font-bold text-brand-navy uppercase text-right whitespace-nowrap sticky right-0 top-0 z-50 bg-[#e2e8f0] shadow-[-2px_2px_5px_rgba(0,0,0,0.06)] border-l border-b-2 border-[#cbd5e1]">AKSI</th>
+                                </tr>
+                            </thead>
+                            <tbody>${trs}</tbody>
+                        </table>
+                        ${filteredGuru.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada data pegawai ditemukan.</div>' : ''}
                     </div>
                 </div>
             </div>`;
@@ -2931,17 +3638,47 @@
             window.render();
         };
 
-        window.triggerSiswaSearch = function(val) { window.state.searchQuerySiswa = val.toLowerCase(); window.render(); };
+        window.triggerSiswaSearch = function(val) {
+            window.state.searchQuerySiswa = val.toLowerCase();
+            window.state.siswaPage = 1;
+            window.render();
+        };
+
+        window.changeSiswaPage = function(newPage) {
+            window.state.siswaPage = newPage;
+            window.render();
+        };
+
+        window.changeSiswaPerPage = function(val) {
+            window.state.siswaPerPage = Number(val) || 50;
+            window.state.siswaPage = 1;
+            window.render();
+        };
 
         window.renderAdminSiswa = function() {
-            const filteredSiswa = window.DB.siswa.filter(s => (s.nama_siswa && s.nama_siswa.toLowerCase().includes(window.state.searchQuerySiswa)) || (s.nisn && String(s.nisn).includes(window.state.searchQuerySiswa)));
+            const q = window.state.searchQuerySiswa;
+            const filteredSiswa = window.DB.siswa.filter(s => {
+                if (!q) return true;
+                return (s.nama_siswa && s.nama_siswa.toLowerCase().includes(q)) ||
+                       (s.nisn && String(s.nisn).toLowerCase().includes(q)) ||
+                       (s.nis && String(s.nis).toLowerCase().includes(q)) ||
+                       (s.kelas && String(s.kelas).toLowerCase().includes(q));
+            });
+
+            const perPage = window.state.siswaPerPage || 50;
+            const totalRows = filteredSiswa.length;
+            const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+            if (window.state.siswaPage > totalPages) window.state.siswaPage = totalPages;
+            const currentPage = Math.max(1, window.state.siswaPage || 1);
+            const startIdx = (currentPage - 1) * perPage;
+            const pagedSiswa = perPage >= 9999 ? filteredSiswa : filteredSiswa.slice(startIdx, startIdx + perPage);
             
-            const trs = filteredSiswa.map((s, idx) => {
+            const trs = pagedSiswa.map((s, idx) => {
                 const pwd = s.password || DEFAULT_PASSWORD;
                 const isDefaultPwd = pwd === DEFAULT_PASSWORD;
                 return `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors bg-white">
-                    <td class="py-3 px-3 whitespace-nowrap sticky-col-1 text-center text-[11px] font-bold text-brand-navy w-[60px] min-w-[60px]">${s.no || (idx + 1)}</td>
+                    <td class="py-3 px-3 whitespace-nowrap sticky-col-1 text-center text-[11px] font-bold text-brand-navy w-[60px] min-w-[60px]">${s.no || (startIdx + idx + 1)}</td>
                     <td class="py-3 px-3 whitespace-nowrap sticky-col-2 text-center text-[11px] font-mono font-bold text-brand-navy w-[60px] min-w-[60px]">${s.no_presensi || '-'}</td>
                     <td class="py-3 px-4 whitespace-nowrap sticky-col-3">
                         <div class="flex items-center gap-3">
@@ -3005,10 +3742,10 @@
             
             return `
             <div class="p-4 md:p-6 w-full h-full flex flex-col box-border relative">
-                <div class="glass-panel p-4 rounded-[20px] flex flex-col xl:flex-row xl:items-center justify-between mb-5 gap-3 shrink-0 relative z-40">
+                <div class="glass-panel p-4 rounded-[20px] flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-3 shrink-0 relative z-40">
                     <div><h1 class="text-[18px] font-extrabold text-brand-navy">Buku Induk Siswa & Wali</h1><p class="text-[11px] text-brand-muted mt-0.5">Validasi komplit Siswa, Password Login, Ekstrakurikuler, Riwayat Sekolah, dan Orang Tua / Wali.</p></div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <div class="relative w-full md:w-[180px] mr-2"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerSiswaSearch(this.value)" placeholder="Cari NISN / Nama..." value="${window.state.searchQuerySiswa}" class="input-glass pl-8 py-1.5"></div>
+                        <div class="relative w-full md:w-[190px] mr-1"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-brand-muted"></i><input type="text" oninput="triggerSiswaSearch(this.value)" placeholder="Cari Nama / NISN / Kelas..." value="${window.state.searchQuerySiswa}" class="input-glass pl-8 py-1.5"></div>
                         <button onclick="triggerUploadSiswa()" class="bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Upload Master</button>
                         <button onclick="downloadFormatSiswa()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Unduh Format</button>
                         <button onclick="showEditSiswa()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 ml-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah</button>
@@ -3074,6 +3811,22 @@
                         </table>
                         ${filteredSiswa.length === 0 ? '<div class="p-8 text-center text-brand-muted text-[12px] font-bold">Tidak ada data siswa ditemukan.</div>' : ''}
                     </div>
+                    <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-brand-muted shrink-0">
+                        <div class="flex items-center gap-2">
+                            <span>Menampilkan ${totalRows === 0 ? 0 : startIdx + 1}–${Math.min(startIdx + perPage, totalRows)} dari ${totalRows} siswa</span>
+                            <select onchange="changeSiswaPerPage(this.value)" class="bg-white border border-slate-300 rounded-lg px-2 py-1 text-[11px] font-bold text-brand-navy outline-none cursor-pointer">
+                                <option value="25" ${perPage === 25 ? 'selected' : ''}>25 / hal</option>
+                                <option value="50" ${perPage === 50 ? 'selected' : ''}>50 / hal</option>
+                                <option value="100" ${perPage === 100 ? 'selected' : ''}>100 / hal</option>
+                                <option value="9999" ${perPage >= 9999 ? 'selected' : ''}>Semua</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="changeSiswaPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand-navy hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none">Sebelumnya</button>
+                            <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-brand-blue border border-blue-200">Hal ${currentPage} / ${totalPages}</span>
+                            <button onclick="changeSiswaPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand-navy hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"> Berikutnya</button>
+                        </div>
+                    </div>
                 </div>
             </div>`;
         };
@@ -3117,7 +3870,7 @@
                     }
                 } else {
                     const uAvatar = window.state.user.avatar || window.getUserAvatarUrl(window.state.user.name);
-                    root.innerHTML = `<div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-3 px-4 border-b border-white/40"><div class="w-8 h-8 rounded-[10px] flex items-center justify-center text-white shadow-sm overflow-hidden"><img src="./MyAlka.png" class="w-full h-full object-cover"></div><div class="flex flex-col"><span class="text-[14px] font-extrabold text-brand-navy leading-none">My Alka</span><span class="text-[9px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}<div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}"><header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full"><div class="font-bold text-brand-navy text-[14px] md:hidden">Admin Panel</div><div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="${uAvatar}" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div></header><main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main></div>${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}</div>`;
+                    root.innerHTML = `<div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center justify-between px-3.5 border-b border-white/40"><div class="flex items-center gap-2.5 min-w-0"><div class="w-8 h-8 rounded-[10px] flex items-center justify-center text-white shadow-sm overflow-hidden shrink-0"><img src="./MyAlka.png" class="w-full h-full object-cover"></div><div class="flex flex-col min-w-0"><span class="text-[13.5px] font-extrabold text-brand-navy leading-none truncate">My Alka</span><span class="text-[8.5px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div>${macOsDotsHtml}</div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}<div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}"><header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full"><div class="flex items-center gap-2 font-bold text-brand-navy text-[14px] md:hidden">${macOsDotsHtml}<span>Admin Panel</span></div><div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="${uAvatar}" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div></header><main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main></div>${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}</div>`;
                 }
             } else {
                 root.innerHTML = window.renderPortalLayout(isMobile);
