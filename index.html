@@ -760,9 +760,16 @@ self.addEventListener('sync', (event) => {
             editingMenuId: null,
             editingAppId: null,
             isUsersTableEditable: true,
+            slider1Minimized: false,
             slider2Minimized: false,
             cloudStatus: 'connecting',
             cloudLastSync: null
+        };
+
+        window.toggleSlider1 = function(e) {
+            if (e) e.stopPropagation();
+            window.state.slider1Minimized = !window.state.slider1Minimized;
+            window.render();
         };
 
         window.toggleSlider2 = function(e) {
@@ -772,7 +779,8 @@ self.addEventListener('sync', (event) => {
         };
 
         window.selectAppFromSlider2 = function(appId) {
-            window.state.slider2Minimized = true;
+            window.state.slider1Minimized = true;
+            window.state.slider2Minimized = false;
             window.navigate('#app-' + appId);
         };
 
@@ -963,6 +971,9 @@ self.addEventListener('sync', (event) => {
             window.DB.users.forEach(u => {
                 if (!u.password) u.password = DEFAULT_PASSWORD;
                 if (!Array.isArray(u.adminApps)) u.adminApps = [];
+                if (u.role === 'Super Admin' && Array.isArray(window.DB.apps)) {
+                    u.adminApps = window.DB.apps.map(a => String(a.id));
+                }
                 if (!u.email) u.email = window.makeEmailFromName(u.name);
                 if (u.status === undefined) u.status = true;
             });
@@ -1005,20 +1016,41 @@ self.addEventListener('sync', (event) => {
                 );
                 if (activeU) {
                     window.state.user.role = activeU.role || window.state.user.role;
-                    window.state.user.adminApps = Array.isArray(activeU.adminApps) ? [...activeU.adminApps] : [];
+                    if (window.state.user.role === 'Super Admin' && Array.isArray(window.DB.apps)) {
+                        window.state.user.adminApps = window.DB.apps.map(a => String(a.id));
+                    } else {
+                        window.state.user.adminApps = Array.isArray(activeU.adminApps) ? [...activeU.adminApps] : [];
+                    }
                     window.saveSessionToStorage();
                 }
             }
+            if (window.syncSsoStorageBridge) window.syncSsoStorageBridge();
         };
 
         window.ensureDefaultPasswords = function() {
             if (!Array.isArray(window.DB.deletedAppIds)) window.DB.deletedAppIds = [];
+            if (Array.isArray(window.DB.menus)) {
+                window.DB.menus.forEach(m => {
+                    if (m.id === 'apps' || m.hash === '#apps') {
+                        m.id = 'apps';
+                        m.hash = '#apps';
+                        m.type = 'container';
+                        m.url = '';
+                    } else if (m.id === 'edukasi' || m.hash === '#edukasi') {
+                        m.id = 'edukasi';
+                        m.hash = '#edukasi';
+                        m.type = 'container';
+                        m.url = '';
+                    }
+                });
+            }
             if (Array.isArray(window.DB.apps)) {
                 window.DB.apps.forEach((a, idx) => {
                     if (a.id === undefined || a.id === null || a.id === '') a.id = 'app-' + (idx + 1);
                     a.id = String(a.id);
                     a.name = String(a.name || a.nama || 'Aplikasi');
-                    a.section = (String(a.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
+                    const rawSec = String(a.section || '').toLowerCase().trim();
+                    a.section = (rawSec === 'edukasi') ? 'edukasi' : 'apps';
                     a.icon = String(a.icon || a.ikon || 'layout-grid');
                     a.color = String(a.color || 'text-blue-500');
                     a.bg = String(a.bg || 'bg-blue-100');
@@ -1064,20 +1096,27 @@ self.addEventListener('sync', (event) => {
         // ATURAN VISIBILITAS APLIKASI BERBASIS ROLE & DELEGASI ADMIN PER APLIKASI
         // ============================================================================
         window.canUserSeeApp = function(app) {
-            if (!app || app.status === false) return false;
+            if (!app) return false;
+
+            // 1. SUPER ADMIN: Hak mutlak tanpa pilihan, melihat seluruh aplikasi & menjadi admin di semua aplikasi
+            if (window.state.isLoggedIn && window.state.user && window.state.user.role === 'Super Admin') {
+                return true;
+            }
+
+            if (app.status === false) return false;
             const roles = Array.isArray(app.roles) ? app.roles : ['Umum'];
 
-            // 1. Jika user login sebagai Super Admin atau Admin, semua aplikasi aktif tampil di Slider 2
+            // 2. Jika user login sebagai Admin atau didelegasikan sebagai Admin Aplikasi tersebut
             if (window.state.isLoggedIn && window.state.user) {
                 const u = window.state.user;
                 const uRole = u.role || '';
                 const uAdminApps = Array.isArray(u.adminApps) ? u.adminApps.map(String) : [];
 
-                if (uRole === 'Super Admin' || uRole === 'Admin') return true;
+                if (uRole === 'Admin') return true;
                 if (uAdminApps.includes(String(app.id))) return true;
             }
 
-            // 2. Aplikasi Umum: otomatis tampil untuk semua pengunjung (bahkan Tamu tanpa login)
+            // 3. Aplikasi Umum: otomatis tampil untuk semua pengunjung (bahkan Tamu tanpa login)
             if (roles.includes('Umum')) return true;
 
             // Jika belum login, aplikasi non-Umum disembunyikan
@@ -1085,10 +1124,10 @@ self.addEventListener('sync', (event) => {
 
             const uRole = window.state.user.role || '';
 
-            // 3. Aplikasi Khusus Pegawai (roles: ['Pegawai'])
+            // 4. Aplikasi Khusus Pegawai (roles: ['Pegawai'])
             if (roles.includes('Pegawai') && uRole === 'Pegawai') return true;
 
-            // 4. Aplikasi Khusus Siswa (roles: ['Warid'])
+            // 5. Aplikasi Khusus Siswa (roles: ['Warid'])
             if (roles.includes('Warid') && uRole === 'Warid') return true;
 
             return false;
@@ -1507,6 +1546,10 @@ self.addEventListener('sync', (event) => {
                 if (!isCanvasSandbox()) {
                     try {
                         const channel = supabaseClient.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'portal_state' }, (payload) => {
+                            // Abaikan pantulan (echo) dari penyimpanan lokal sendiri agar layar Admin tidak ter-reset saat sedang bekerja
+                            if (window.lastLocalSaveTimestamp && (Date.now() - window.lastLocalSaveTimestamp < 4500)) {
+                                return;
+                            }
                             const newData = payload.new && payload.new.data ? payload.new.data : null;
                             if (newData) {
                                 if (Array.isArray(newData.menus)) window.DB.menus = newData.menus;
@@ -1531,7 +1574,7 @@ self.addEventListener('sync', (event) => {
             }
         }
 
-        window.globalSave = async function() {
+        window.globalSave = async function(silent = false) {
             if (window.state.editingMenuId !== null && window.state.editingMenuId !== undefined) {
                 window.commitMenuInlineSilent(window.state.editingMenuId);
             }
@@ -1551,14 +1594,20 @@ self.addEventListener('sync', (event) => {
             };
             try { localStorage.setItem('alka_portal_state_cache', JSON.stringify(dataToSave)); } catch (e) {}
 
-            if (!supabaseClient) { window.showToast('Data disimpan lokal.', 'info', 'text-orange-500'); window.render(); return; }
-            window.showToast('Menyimpan ke Supabase...', 'cloud-upload', 'text-blue-500');
+            if (!supabaseClient) {
+                if (!silent) window.showToast('Data disimpan lokal.', 'info', 'text-orange-500');
+                window.render();
+                return;
+            }
+            window.lastLocalSaveTimestamp = Date.now();
+            if (!silent) window.showToast('Menyimpan ke Supabase...', 'cloud-upload', 'text-blue-500');
             try {
                 const { error } = await supabaseClient.from('portal_state').upsert({ id: 1, data: dataToSave });
                 if (error) throw error;
 
                 await syncRelationalTables();
-                window.showToast('Tersimpan di Cloud & Tabel Relasional!', 'cloud-check', 'text-green-500');
+                window.lastLocalSaveTimestamp = Date.now();
+                if (!silent) window.showToast('Tersimpan di Cloud & Tabel Relasional!', 'cloud-check', 'text-green-500');
             } catch(e) {
                 window.showToast('Gagal simpan Cloud: ' + (e.message || 'Cek RLS tabel di Supabase'), 'x-circle', 'text-red-500');
             }
@@ -1659,7 +1708,18 @@ self.addEventListener('sync', (event) => {
                 color
             });
             if (window.DB.logs.length > 50) window.DB.logs.pop();
-            if (supabaseClient) window.globalSave();
+            try {
+                localStorage.setItem('alka_portal_state_cache', JSON.stringify({
+                    menus: window.DB.menus,
+                    apps: window.DB.apps,
+                    deletedAppIds: window.DB.deletedAppIds || [],
+                    users: window.DB.users,
+                    logs: window.DB.logs,
+                    guru: window.DB.guru,
+                    siswa: window.DB.siswa,
+                    notifications: window.DB.notifications || window.NOTIFICATIONS
+                }));
+            } catch (e) {}
         };
 
         window.openModal = function(htmlContent, isCompact = false) {
@@ -1709,9 +1769,18 @@ self.addEventListener('sync', (event) => {
                 window.showToast('Menu berhasil diperbarui!');
             }
             window.render();
-            window.globalSave();
+            window.globalSave(true);
         };
-        window.toggleMenuVisibility = function(id) { const menu = window.DB.menus.find(m => String(m.id) === String(id)); if (menu) { menu.visible = !menu.visible; window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange'); window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`); window.render(); window.globalSave(); } };
+        window.toggleMenuVisibility = function(id) {
+            const menu = window.DB.menus.find(m => String(m.id) === String(id));
+            if (menu) {
+                menu.visible = !menu.visible;
+                window.logActivity(`Mengubah visibilitas menu`, menu.name, 'Menu Portal', 'orange');
+                window.showToast(`Menu ${menu.name} ${menu.visible ? 'ditampilkan' : 'disembunyikan'}.`);
+                window.render();
+                window.globalSave(true);
+            }
+        };
         
         // ============================================================================
         // MANAJEMEN APLIKASI: EDIT INLINE, TAMBAH APLIKASI, & HAPUS APLIKASI
@@ -1758,7 +1827,7 @@ self.addEventListener('sync', (event) => {
             window.logActivity(`Mengubah visibilitas role aplikasi ${app.name}`, app.roles.join(', '), 'Aplikasi', 'blue');
             window.showToast(`Visibilitas ${app.name}: ${app.roles.join(', ')}`);
             window.render();
-            window.globalSave();
+            window.globalSave(true);
         };
 
         window.commitAppInlineSilent = function(id) {
@@ -1775,7 +1844,7 @@ self.addEventListener('sync', (event) => {
                 if (nameEl && nameEl.value.trim()) app.name = nameEl.value.trim();
                 if (iconEl && iconEl.value.trim()) app.icon = iconEl.value.trim();
                 if (urlEl) app.url = urlEl.value.trim();
-                if (secEl) app.section = secEl.value;
+                if (secEl && (secEl.value === 'apps' || secEl.value === 'edukasi')) app.section = secEl.value;
                 if (catEl && catEl.value.trim()) app.cat = catEl.value.trim();
 
                 if (colEl) {
@@ -1807,7 +1876,7 @@ self.addEventListener('sync', (event) => {
                 window.showToast('Aplikasi berhasil diperbarui!');
             }
             window.render();
-            window.globalSave();
+            window.globalSave(true);
         };
 
         window.toggleAppStatus = function(id) {
@@ -1817,91 +1886,7 @@ self.addEventListener('sync', (event) => {
                 window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
                 window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
                 window.render();
-                window.globalSave();
-            }
-        };
-
-        window.toggleAppRoleDirect = function(appId, roleName, isChecked) {
-            const app = window.DB.apps.find(a => String(a.id) === String(appId));
-            if (!app) return;
-            if (!Array.isArray(app.roles)) app.roles = ['Umum'];
-
-            if (roleName === 'Umum') {
-                if (isChecked) {
-                    app.roles = ['Umum'];
-                } else {
-                    app.roles = ['Admin', 'Pegawai'];
-                }
-            } else {
-                app.roles = app.roles.filter(r => r !== 'Umum');
-                if (isChecked) {
-                    if (!app.roles.includes(roleName)) app.roles.push(roleName);
-                } else {
-                    app.roles = app.roles.filter(r => r !== roleName);
-                    if (app.roles.length === 0) app.roles = ['Umum'];
-                }
-            }
-            window.logActivity(`Mengubah visibilitas role aplikasi ${app.name}`, app.roles.join(', '), 'Aplikasi', 'blue');
-            window.showToast(`Visibilitas ${app.name}: ${app.roles.join(', ')}`);
-            window.render();
-            window.globalSave();
-        };
-
-        window.commitAppInlineSilent = function(id) {
-            const app = window.DB.apps.find(a => String(a.id) === String(id));
-            if (app) {
-                const nameEl = document.getElementById(`editAppName-${id}`);
-                const iconEl = document.getElementById(`editAppIcon-${id}`);
-                const urlEl = document.getElementById(`editAppUrl-${id}`);
-                const secEl = document.getElementById(`editAppSection-${id}`);
-                const catEl = document.getElementById(`editAppCat-${id}`);
-                const colEl = document.getElementById(`editAppColor-${id}`);
-                const umumEl = document.getElementById(`editAppRole-Umum-${id}`);
-
-                if (nameEl && nameEl.value.trim()) app.name = nameEl.value.trim();
-                if (iconEl && iconEl.value.trim()) app.icon = iconEl.value.trim();
-                if (urlEl) app.url = urlEl.value.trim();
-                if (secEl) app.section = secEl.value;
-                if (catEl && catEl.value.trim()) app.cat = catEl.value.trim();
-
-                if (colEl) {
-                    const foundColor = AVAILABLE_COLORS.find(c => c.id === colEl.value);
-                    if (foundColor) { app.color = foundColor.text; app.bg = foundColor.bg; }
-                }
-
-                if (umumEl) {
-                    let newRoles = [];
-                    if (umumEl.checked) {
-                        newRoles.push('Umum');
-                    } else {
-                        if (document.getElementById(`editAppRole-Admin-${id}`) && document.getElementById(`editAppRole-Admin-${id}`).checked) newRoles.push('Admin');
-                        if (document.getElementById(`editAppRole-Pegawai-${id}`) && document.getElementById(`editAppRole-Pegawai-${id}`).checked) newRoles.push('Pegawai');
-                        if (document.getElementById(`editAppRole-Warid-${id}`) && document.getElementById(`editAppRole-Warid-${id}`).checked) newRoles.push('Warid');
-                        if (newRoles.length === 0) newRoles.push('Admin');
-                    }
-                    app.roles = newRoles;
-                }
-            }
-            window.state.editingAppId = null;
-        };
-
-        window.saveAppInline = function(id) {
-            window.commitAppInlineSilent(id);
-            const app = window.DB.apps.find(a => String(a.id) === String(id));
-            if (app) {
-                window.logActivity('Mengubah detail aplikasi', app.name, 'Aplikasi', 'blue');
-                window.showToast('Aplikasi berhasil diperbarui!');
-            }
-            window.render();
-        };
-
-        window.toggleAppStatus = function(id) {
-            const app = window.DB.apps.find(a => String(a.id) === String(id));
-            if (app) {
-                app.status = !app.status;
-                window.logActivity(`${app.status ? 'Mengaktifkan' : 'Menonaktifkan'} aplikasi`, app.name, 'Aplikasi', app.status ? 'green' : 'red');
-                window.showToast(`Aplikasi ${app.name} ${app.status ? 'diaktifkan' : 'dinonaktifkan'}.`);
-                window.render();
+                window.globalSave(true);
             }
         };
 
@@ -1920,35 +1905,38 @@ self.addEventListener('sync', (event) => {
         };
 
         window.showAddAppModal = function(defaultSection = 'apps') {
-            const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}">${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+            const targetSection = defaultSection === 'edukasi' ? 'edukasi' : 'apps';
+            const targetMenuLabel = targetSection === 'edukasi'
+                ? 'Tabel Daftar Karya & Edukasi (Otomatis Tampil di Menu EDUKASI)'
+                : 'Tabel Daftar Aplikasi Utama (Otomatis Tampil di Menu APLIKASI)';
+            const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${targetSection === 'edukasi' && c.id === 'orange' ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
             const html = `
                 <div class="mb-4 border-b border-gray-200 pb-3">
-                    <h2 class="text-lg font-extrabold text-brand-navy">Tambah Aplikasi / Karya Baru</h2>
-                    <p class="text-[11px] text-brand-muted">Aplikasi yang ditambahkan akan otomatis terintegrasi ke Portal & pilihan Hak Akses Admin Aplikasi.</p>
+                    <h2 class="text-lg font-extrabold text-brand-navy">${targetSection === 'edukasi' ? 'Tambah Karya & Edukasi Baru' : 'Tambah Aplikasi Utama Baru'}</h2>
+                    <p class="text-[11px] text-brand-muted">Item ini akan langsung masuk ke <strong>${targetMenuLabel}</strong>.</p>
                 </div>
                 <form onsubmit="saveNewApp(event)" class="flex flex-col gap-3.5 max-h-[68vh] overflow-y-auto slider-scroll p-1 pr-2">
+                    <input type="hidden" id="newAppSection" value="${targetSection}">
+                    <div class="p-2.5 rounded-xl ${targetSection === 'edukasi' ? 'bg-orange-50 border border-orange-200 text-orange-800' : 'bg-blue-50 border border-blue-200 text-blue-800'} text-[11px] font-extrabold flex items-center gap-2">
+                        <i data-lucide="${targetSection === 'edukasi' ? 'lightbulb' : 'layout-grid'}" class="w-4 h-4 shrink-0"></i>
+                        <span>Penempatan Otomatis: ${targetMenuLabel}</span>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-brand-muted uppercase">Nama Aplikasi *</label>
-                            <input type="text" id="newAppName" required placeholder="Contoh: SarprasQ / E-Rapor" class="input-glass py-2">
+                            <label class="text-[10px] font-bold text-brand-muted uppercase">Nama ${targetSection === 'edukasi' ? 'Karya / Edukasi' : 'Aplikasi'} *</label>
+                            <input type="text" id="newAppName" required placeholder="${targetSection === 'edukasi' ? 'Contoh: Math Adventure / Karya Kelas 6A' : 'Contoh: SarprasQ / E-Rapor'}" class="input-glass py-2">
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-[10px] font-bold text-brand-muted uppercase">Kategori *</label>
-                            <input type="text" id="newAppCat" required placeholder="Contoh: Sarana & Prasarana / Akademik" value="${defaultSection === 'edukasi' ? 'Karya Siswa' : 'Akademik'}" class="input-glass py-2">
+                            <input type="text" id="newAppCat" required placeholder="Contoh: ${targetSection === 'edukasi' ? 'Games Edukasi / Karya Siswa' : 'Akademik / Keuangan'}" value="${targetSection === 'edukasi' ? 'Karya Siswa' : 'Akademik'}" class="input-glass py-2">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-brand-muted uppercase">Laci Penempatan</label>
-                            <select id="newAppSection" class="input-glass py-2 cursor-pointer">
-                                <option value="apps" ${defaultSection === 'apps' ? 'selected' : ''}>Laci Aplikasi Utama</option>
-                                <option value="edukasi" ${defaultSection === 'edukasi' ? 'selected' : ''}>Laci Karya & Edukasi</option>
-                            </select>
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div class="flex flex-col gap-1">
                             <label class="text-[10px] font-bold text-brand-muted uppercase">Nama Ikon (Lucide)</label>
-                            <input type="text" id="newAppIcon" value="layout-grid" required placeholder="Contoh: building-2, wallet" class="input-glass py-2">
+                            <input type="text" id="newAppIcon" value="${targetSection === 'edukasi' ? 'gamepad-2' : 'layout-grid'}" required placeholder="Contoh: building-2, wallet, gamepad-2" class="input-glass py-2">
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-[10px] font-bold text-brand-muted uppercase">Tema Warna</label>
@@ -1965,30 +1953,30 @@ self.addEventListener('sync', (event) => {
                         <label class="text-[10px] font-extrabold text-brand-blue uppercase">Aturan Visibilitas Aplikasi di Portal</label>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-brand-navy">
-                                <input type="checkbox" id="newAppRoleUmum" onchange="toggleUmumModalAdd()" class="w-4 h-4 cursor-pointer">
+                                <input type="checkbox" id="newAppRoleUmum" checked onchange="toggleUmumModalAdd()" class="w-4 h-4 cursor-pointer">
                                 <span>Umum</span>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-indigo-700">
-                                <input type="checkbox" id="newAppRoleAdmin" checked class="w-4 h-4 cursor-pointer">
+                                <input type="checkbox" id="newAppRoleAdmin" disabled class="w-4 h-4 cursor-pointer">
                                 <span>Admin</span>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-emerald-700">
-                                <input type="checkbox" id="newAppRolePegawai" class="w-4 h-4 cursor-pointer">
+                                <input type="checkbox" id="newAppRolePegawai" disabled class="w-4 h-4 cursor-pointer">
                                 <span>Pegawai</span>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-[11px] font-bold text-amber-700">
-                                <input type="checkbox" id="newAppRoleWarid" class="w-4 h-4 cursor-pointer">
+                                <input type="checkbox" id="newAppRoleWarid" disabled class="w-4 h-4 cursor-pointer">
                                 <span>Warid</span>
                             </label>
                         </div>
                         <p class="text-[10px] text-brand-muted leading-tight">
-                            *Jika <strong>Umum</strong> dicentang, aplikasi tampil untuk semua pengunjung. Jika tidak dicentang, Anda bebas memilih kombinasi <strong>Admin</strong>, <strong>Pegawai</strong>, atau <strong>Warid</strong>.
+                            *Jika <strong>Umum</strong> dicentang, aplikasi tampil untuk semua pengunjung di menu <strong>${targetSection === 'edukasi' ? 'Edukasi' : 'Aplikasi'}</strong>. Jika tidak dicentang, Anda bebas memilih kombinasi <strong>Admin</strong>, <strong>Pegawai</strong>, atau <strong>Warid</strong>.
                         </p>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-2 pt-3 border-t border-gray-200">
                         <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-bold text-brand-muted hover:bg-gray-100 rounded-xl">Batal</button>
-                        <button type="submit" class="px-5 py-2 text-xs font-bold bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Simpan Aplikasi</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-bold ${targetSection === 'edukasi' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-xl shadow-md flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Simpan ke ${targetSection === 'edukasi' ? 'Menu Edukasi' : 'Menu Aplikasi'}</button>
                     </div>
                 </form>
             `;
@@ -2114,6 +2102,11 @@ self.addEventListener('sync', (event) => {
             }
             const u = window.DB.users.find(x => String(x.id) === String(userId));
             if (!u) return;
+            if (u.role === 'Super Admin') {
+                window.showToast('Super Admin otomatis menjadi Admin di semua aplikasi tanpa perlu dipilih.', 'shield-check', 'text-orange-500');
+                window.render();
+                return;
+            }
             if (!Array.isArray(u.adminApps)) u.adminApps = [];
 
             if (isChecked) {
@@ -2131,6 +2124,7 @@ self.addEventListener('sync', (event) => {
                 (String(window.state.user.id) === String(u.id) ||
                  window.state.user.name.trim().toLowerCase() === u.name.trim().toLowerCase())) {
                 window.state.user.adminApps = [...u.adminApps];
+                if (window.syncSsoStorageBridge) window.syncSsoStorageBridge();
             }
 
             const appObj = window.DB.apps.find(a => a.id === appId);
@@ -2148,6 +2142,10 @@ self.addEventListener('sync', (event) => {
             if (filteredUsers.length === 0) return;
 
             filteredUsers.forEach(u => {
+                if (u.role === 'Super Admin') {
+                    u.adminApps = window.DB.apps.map(a => String(a.id));
+                    return;
+                }
                 if (!Array.isArray(u.adminApps)) u.adminApps = [];
                 if (isChecked) {
                     if (!u.adminApps.includes(appId)) u.adminApps.push(appId);
@@ -2167,6 +2165,7 @@ self.addEventListener('sync', (event) => {
                 }
             });
 
+            if (window.syncSsoStorageBridge) window.syncSsoStorageBridge();
             const appObj = window.DB.apps.find(a => a.id === appId);
             const appName = appObj ? appObj.name : appId;
             window.logActivity(`Ubah massal delegasi admin ${appName}`, isChecked ? 'Centang Semua' : 'Batal Semua', 'Hak Akses', isChecked ? 'green' : 'slate');
@@ -2182,11 +2181,18 @@ self.addEventListener('sync', (event) => {
             const u = window.DB.users.find(x => String(x.id) === String(userId));
             if (u) {
                 u.role = newRole;
+                if (newRole === 'Super Admin') {
+                    u.adminApps = window.DB.apps.map(a => String(a.id));
+                }
                 if (window.state.isLoggedIn && window.state.user && String(window.state.user.id) === String(u.id)) {
                     window.state.user.role = newRole;
+                    if (newRole === 'Super Admin') {
+                        window.state.user.adminApps = window.DB.apps.map(a => String(a.id));
+                    }
+                    if (window.syncSsoStorageBridge) window.syncSsoStorageBridge();
                 }
                 window.logActivity(`Mengubah role pengguna ${u.name}`, newRole, 'Hak Akses', 'purple');
-                window.showToast(`Role ${u.name} diubah menjadi ${newRole}`);
+                window.showToast(`Role ${u.name} diubah menjadi ${newRole}${newRole === 'Super Admin' ? ' (Akses Penuh Otomatis)' : ''}`);
                 window.render();
             }
         };
@@ -2248,10 +2254,20 @@ self.addEventListener('sync', (event) => {
             const trs = filteredUsers.map((u, idx) => {
                 const pwd = u.password || DEFAULT_PASSWORD;
                 const isDefaultPwd = pwd === DEFAULT_PASSWORD;
-                const userAdminApps = Array.isArray(u.adminApps) ? u.adminApps : [];
+                const isSuperAdminRow = u.role === 'Super Admin';
+                const userAdminApps = isSuperAdminRow ? availableApps.map(a => a.id) : (Array.isArray(u.adminApps) ? u.adminApps : []);
 
-                // Checkbox Centang Per Aplikasi Langsung di Sel Baris
+                // Checkbox Centang Per Aplikasi Langsung di Sel Baris (Super Admin Otomatis Penuh Tanpa Pilihan)
                 const appCellsHtml = availableApps.map(app => {
+                    if (isSuperAdminRow) {
+                        return `
+                            <td class="py-2.5 px-3 text-center border-r border-slate-100 bg-orange-50/40" title="Super Admin otomatis memiliki hak Admin penuh di ${app.name}">
+                                <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 text-[9px] font-extrabold gap-1">
+                                    <i data-lucide="shield-check" class="w-3 h-3"></i> AUTO
+                                </span>
+                            </td>
+                        `;
+                    }
                     const isAssigned = userAdminApps.includes(app.id);
                     return `
                         <td class="py-2.5 px-3 text-center border-r border-slate-100 bg-white hover:bg-blue-50/40 transition-colors">
@@ -2330,6 +2346,9 @@ self.addEventListener('sync', (event) => {
                         </button>
                         <button onclick="showAddUserModal()" class="bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5">
                             <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Tambah Akun
+                        </button>
+                        <button onclick="showSsoIntegrationGuideModal()" class="bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-bold px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5" title="Lihat Kode Pendeteksi Login untuk Semua Aplikasi">
+                            <i data-lucide="code-2" class="w-3.5 h-3.5"></i> Info SSO Aplikasi
                         </button>
                         <button onclick="globalSave()" class="bg-green-500 hover:bg-green-600 text-white text-[12px] font-bold px-3.5 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5">
                             <i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan Data
@@ -2458,7 +2477,7 @@ self.addEventListener('sync', (event) => {
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-[10px] font-bold text-brand-muted uppercase">5. Role Utama Portal</label>
-                            <select id="modalUserRole" class="input-glass py-2 font-bold cursor-pointer">${roleOptions}</select>
+                            <select id="modalUserRole" onchange="handleModalRoleSelectChange(this.value)" class="input-glass py-2 font-bold cursor-pointer">${roleOptions}</select>
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-[10px] font-bold text-brand-muted uppercase">6. Status Akun</label>
@@ -2469,7 +2488,17 @@ self.addEventListener('sync', (event) => {
                         </div>
                     </div>
 
-                    <div class="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/70 flex flex-col gap-2 mt-1">
+                    <div id="modalSuperAdminAutoNotice" class="${u.role === 'Super Admin' ? 'flex' : 'hidden'} p-3.5 rounded-xl bg-orange-50 border border-orange-200 items-center gap-3 mt-1">
+                        <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 border border-white shadow-xs">
+                            <i data-lucide="crown" class="w-5 h-5"></i>
+                        </div>
+                        <div class="text-[11px] text-orange-950 leading-relaxed font-medium">
+                            <strong class="font-extrabold block text-orange-900">Super Admin: Hak Akses Penuh Otomatis</strong>
+                            Tidak memerlukan pilihan manual. Akun ini otomatis memiliki akses ke seluruh tampilan aplikasi dan menjadi Admin di semua aplikasi (termasuk seluruh aplikasi Iframe).
+                        </div>
+                    </div>
+
+                    <div id="modalDelegatedAppsContainer" class="${u.role === 'Super Admin' ? 'hidden' : 'flex'} p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/70 flex-col gap-2 mt-1">
                         <div class="flex items-center justify-between">
                             <label class="text-[10.5px] font-extrabold text-indigo-900 uppercase flex items-center gap-1.5">
                                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-600"></i>
@@ -2505,6 +2534,18 @@ self.addEventListener('sync', (event) => {
             window.openModal(window.buildUserModalFormHtml(user));
         };
 
+        window.handleModalRoleSelectChange = function(roleVal) {
+            const noticeEl = document.getElementById('modalSuperAdminAutoNotice');
+            const appsContainerEl = document.getElementById('modalDelegatedAppsContainer');
+            if (roleVal === 'Super Admin') {
+                if (noticeEl) { noticeEl.classList.remove('hidden'); noticeEl.classList.add('flex'); }
+                if (appsContainerEl) { appsContainerEl.classList.add('hidden'); appsContainerEl.classList.remove('flex'); }
+            } else {
+                if (noticeEl) { noticeEl.classList.add('hidden'); noticeEl.classList.remove('flex'); }
+                if (appsContainerEl) { appsContainerEl.classList.remove('hidden'); appsContainerEl.classList.add('flex'); }
+            }
+        };
+
         window.saveUserFormModal = function(event, editId) {
             event.preventDefault();
             const guruIdVal = document.getElementById('modalUserGuruSelect').value;
@@ -2514,7 +2555,9 @@ self.addEventListener('sync', (event) => {
             const role = document.getElementById('modalUserRole').value;
             const status = document.getElementById('modalUserStatus').value === 'true';
 
-            const checkedAdminApps = Array.from(document.querySelectorAll('input[name="modalUserAdminApps"]:checked')).map(cb => cb.value);
+            const checkedAdminApps = role === 'Super Admin'
+                ? window.DB.apps.map(a => String(a.id))
+                : Array.from(document.querySelectorAll('input[name="modalUserAdminApps"]:checked')).map(cb => cb.value);
 
             let targetUser = null;
             if (editId !== null && editId !== undefined) {
@@ -2584,8 +2627,14 @@ self.addEventListener('sync', (event) => {
             window.location.hash = hash;
             window.state.path = hash;
             window.state.zoom = 1.0;
-            if (hash === '#apps' || hash === '#edukasi') {
+            if (hash.startsWith('#app-')) {
+                window.state.slider1Minimized = true;
                 window.state.slider2Minimized = false;
+            } else if (hash === '#apps' || hash === '#edukasi') {
+                window.state.slider1Minimized = false;
+                window.state.slider2Minimized = false;
+            } else {
+                window.state.slider1Minimized = false;
             }
             window.render();
         };
@@ -2615,7 +2664,7 @@ self.addEventListener('sync', (event) => {
         };
 
         // ============================================================================
-        // DUAL-BRIDGE SSO AUTO-LOGIN ENGINE FOR IFRAME APPS (DENGAN DELEGASI ADMIN)
+        // DUAL-BRIDGE & MULTI-CHANNEL SSO ENGINE FOR ALL IFRAME APPS
         // ============================================================================
         window.resolveActiveIframeAppId = function(rawUrl) {
             if (window.state.path && window.state.path.startsWith('#app-')) {
@@ -2646,49 +2695,148 @@ self.addEventListener('sync', (event) => {
             return null;
         };
 
+        // Mengambil profil lengkap pengguna yang sedang login (Pegawai / Siswa / Admin / Super Admin)
+        window.resolveFullLoggedInUserProfile = function() {
+            if (!window.state.isLoggedIn || !window.state.user) {
+                return {
+                    id: 0,
+                    name: 'Tamu',
+                    namaLengkap: 'Tamu',
+                    role: 'Tamu',
+                    email: '',
+                    nik: '',
+                    nbm: '',
+                    nis: '',
+                    nisn: '',
+                    kelas: '',
+                    waliKelas: '',
+                    tugasTambahan: '',
+                    pelatihEkstra: '',
+                    noWa: '',
+                    avatar: ''
+                };
+            }
+
+            const u = window.state.user;
+            const cleanName = String(u.name || '').trim().toLowerCase();
+
+            const matchedUser = (window.DB.users || []).find(x =>
+                String(x.id) === String(u.id) ||
+                (x.name && String(x.name).trim().toLowerCase() === cleanName)
+            );
+            const matchedGuru = (window.DB.guru || []).find(g =>
+                (u.sourceType === 'guru' && String(g.id) === String(u.id)) ||
+                (matchedUser && matchedUser.guruId !== undefined && String(g.id) === String(matchedUser.guruId)) ||
+                (g.nama && String(g.nama).trim().toLowerCase() === cleanName)
+            );
+            const matchedSiswa = (window.DB.siswa || []).find(s =>
+                (u.sourceType === 'siswa' && String(s.id) === String(u.id)) ||
+                (s.nama_siswa && String(s.nama_siswa).trim().toLowerCase() === cleanName)
+            );
+
+            const gelar = matchedGuru && matchedGuru.namaGelar ? matchedGuru.namaGelar.trim() : '';
+            const baseName = u.name || (matchedGuru && matchedGuru.nama) || (matchedSiswa && matchedSiswa.nama_siswa) || 'Pengguna';
+            const namaLengkap = gelar ? `${baseName}, ${gelar}` : baseName;
+
+            return {
+                id: u.id || (matchedUser && matchedUser.id) || 0,
+                guruId: matchedGuru ? matchedGuru.id : null,
+                siswaId: matchedSiswa ? matchedSiswa.id : null,
+                name: baseName,
+                namaGelar: gelar,
+                namaLengkap: namaLengkap,
+                role: u.role || (matchedUser && matchedUser.role) || 'Umum',
+                email: (matchedUser && matchedUser.email) || window.makeEmailFromName(baseName),
+                nik: (matchedGuru && matchedGuru.nik) || (matchedSiswa && matchedSiswa.nik_anak) || '',
+                nbm: (matchedGuru && matchedGuru.nbm) || '',
+                nis: (matchedSiswa && matchedSiswa.nis) || '',
+                nisn: (matchedSiswa && matchedSiswa.nisn) || '',
+                kelas: (matchedSiswa && matchedSiswa.kelas) || (matchedGuru && matchedGuru.waliKelas) || '',
+                waliKelas: (matchedGuru && matchedGuru.waliKelas) || '',
+                tugasTambahan: (matchedGuru && matchedGuru.tugasTambahan) || '',
+                pelatihEkstra: (matchedGuru && matchedGuru.pelatihEkstra) || '',
+                noWa: (matchedGuru && matchedGuru.noWa) || (matchedSiswa && matchedSiswa.no_wa) || '',
+                avatar: u.avatar || window.getUserAvatarUrl(baseName)
+            };
+        };
+
         window.getAlkaSsoPayload = function(rawUrl) {
             const isLoggedIn = Boolean(window.state.isLoggedIn);
-            const userObj = isLoggedIn && window.state.user ? window.state.user : { id: 0, name: 'Tamu', role: 'Tamu', avatar: '', adminApps: [] };
-            const userAdminApps = isLoggedIn && Array.isArray(userObj.adminApps) ? userObj.adminApps : [];
-            const currentAppId = window.resolveActiveIframeAppId(rawUrl);
+            const profile = window.resolveFullLoggedInUserProfile();
+            const allAppIds = Array.isArray(window.DB.apps) ? window.DB.apps.map(a => String(a.id)) : [];
+            const isSuperAdmin = Boolean(isLoggedIn && profile.role === 'Super Admin');
+            const isPortalAdmin = Boolean(isLoggedIn && (isSuperAdmin || profile.role === 'Admin'));
 
-            const isPortalAdmin = isLoggedIn && (userObj.role === 'Super Admin' || userObj.role === 'Admin');
-            const isDelegatedAppAdmin = Boolean(isLoggedIn && currentAppId && userAdminApps.includes(currentAppId));
-            const isAdmin = Boolean(isPortalAdmin || isDelegatedAppAdmin);
+            // Super Admin otomatis menjadi Admin di SEMUA aplikasi tanpa pilihan
+            const userAdminApps = isSuperAdmin
+                ? allAppIds
+                : (isLoggedIn && window.state.user && Array.isArray(window.state.user.adminApps)
+                    ? window.state.user.adminApps.map(String)
+                    : []);
+
+            const currentAppId = window.resolveActiveIframeAppId(rawUrl);
+            const isDelegatedAppAdmin = Boolean(isLoggedIn && currentAppId && userAdminApps.includes(String(currentAppId)));
+            const isAdmin = Boolean(isSuperAdmin || isPortalAdmin || isDelegatedAppAdmin);
 
             return {
                 type: 'ALKA_SSO_AUTH',
                 source: 'MY_ALKA_PORTAL',
                 isLoggedIn: isLoggedIn,
+                isSuperAdmin: isSuperAdmin,
                 isAdmin: isAdmin,
                 appId: currentAppId || '',
                 adminApps: userAdminApps,
-                role: isLoggedIn ? userObj.role : 'Tamu',
+                role: isLoggedIn ? profile.role : 'Tamu',
                 user: {
-                    id: userObj.id || 0,
-                    name: userObj.name || 'Tamu',
-                    role: isLoggedIn ? userObj.role : 'Tamu',
+                    ...profile,
+                    isLoggedIn: isLoggedIn,
+                    isSuperAdmin: isSuperAdmin,
                     isAdmin: isAdmin,
-                    adminApps: userAdminApps,
-                    avatar: isLoggedIn ? (userObj.avatar || window.getUserAvatarUrl(userObj.name)) : ''
+                    adminApps: userAdminApps
                 },
                 timestamp: Date.now()
             };
         };
 
+        // Menyimpan status SSO ke LocalStorage & SessionStorage agar semua aplikasi di domain yang sama langsung mendeteksi siapa yang login
+        window.syncSsoStorageBridge = function(rawUrl) {
+            try {
+                const payload = window.getAlkaSsoPayload(rawUrl);
+                const serializedPayload = JSON.stringify(payload);
+                const serializedUser = JSON.stringify(payload.user);
+                localStorage.setItem('ALKA_SSO_AUTH', serializedPayload);
+                localStorage.setItem('ALKA_SSO_USER', serializedUser);
+                sessionStorage.setItem('ALKA_SSO_AUTH', serializedPayload);
+                sessionStorage.setItem('ALKA_SSO_USER', serializedUser);
+            } catch (e) {}
+        };
+
         window.buildSsoIframeUrl = function(rawUrl) {
             if (!rawUrl) return '';
             try {
+                window.syncSsoStorageBridge(rawUrl);
                 const payload = window.getAlkaSsoPayload(rawUrl);
                 const parsedUrl = new URL(rawUrl, window.location.href);
                 parsedUrl.searchParams.set('alka_sso', '1');
                 parsedUrl.searchParams.set('alka_logged_in', payload.isLoggedIn ? '1' : '0');
+                parsedUrl.searchParams.set('alka_is_super_admin', payload.isSuperAdmin ? '1' : '0');
                 parsedUrl.searchParams.set('alka_is_admin', payload.isAdmin ? '1' : '0');
                 parsedUrl.searchParams.set('alka_role', payload.role);
                 parsedUrl.searchParams.set('alka_user', payload.user.name);
+                parsedUrl.searchParams.set('alka_full_name', payload.user.namaLengkap || payload.user.name);
+                parsedUrl.searchParams.set('alka_id', String(payload.user.id || 0));
+                if (payload.user.nik) parsedUrl.searchParams.set('alka_nik', String(payload.user.nik));
+                if (payload.user.nbm) parsedUrl.searchParams.set('alka_nbm', String(payload.user.nbm));
+                if (payload.user.nisn) parsedUrl.searchParams.set('alka_nisn', String(payload.user.nisn));
+                if (payload.user.kelas) parsedUrl.searchParams.set('alka_kelas', String(payload.user.kelas));
+                if (payload.user.waliKelas) parsedUrl.searchParams.set('alka_wali_kelas', String(payload.user.waliKelas));
                 if (payload.adminApps && payload.adminApps.length > 0) {
                     parsedUrl.searchParams.set('alka_admin_apps', payload.adminApps.join(','));
                 }
+                try {
+                    const encodedJson = btoa(unescape(encodeURIComponent(JSON.stringify(payload.user))));
+                    parsedUrl.searchParams.set('alka_sso_b64', encodedJson);
+                } catch (b64Err) {}
                 return parsedUrl.toString();
             } catch (err) {
                 return rawUrl;
@@ -2697,19 +2845,75 @@ self.addEventListener('sync', (event) => {
 
         window.broadcastSsoToIframe = function(iframeEl) {
             const targetIframe = iframeEl || document.getElementById('alka-main-iframe');
+            const rawUrl = targetIframe ? (targetIframe.getAttribute('data-raw-url') || targetIframe.src || '') : '';
+            window.syncSsoStorageBridge(rawUrl);
+
             if (!targetIframe || !targetIframe.contentWindow) return;
-            const rawUrl = targetIframe.getAttribute('data-raw-url') || targetIframe.src || '';
-            const payload = window.getAlkaSsoPayload(rawUrl);
-            try {
-                targetIframe.contentWindow.postMessage(payload, '*');
-            } catch (err) {}
+            const sendWave = () => {
+                if (!targetIframe || !targetIframe.contentWindow) return;
+                const payload = window.getAlkaSsoPayload(rawUrl);
+                try {
+                    targetIframe.contentWindow.postMessage(payload, '*');
+                } catch (err) {}
+            };
+
+            // Kirim langsung & ulangi beberapa gelombang agar framework aplikasi anak (React/Vue/Vanilla) pasti menangkapnya
+            sendWave();
+            setTimeout(sendWave, 300);
+            setTimeout(sendWave, 1000);
+            setTimeout(sendWave, 2500);
         };
 
         window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'ALKA_REQUEST_SSO') {
+            if (event.data && (event.data.type === 'ALKA_REQUEST_SSO' || event.data.type === 'REQUEST_ALKA_USER' || event.data === 'ALKA_REQUEST_SSO')) {
                 window.broadcastSsoToIframe();
             }
         });
+
+        window.showSsoIntegrationGuideModal = function() {
+            const samplePayload = window.getAlkaSsoPayload('');
+            const html = `
+                <div class="text-left">
+                    <div class="flex items-start justify-between border-b border-slate-200 pb-3 mb-3">
+                        <div>
+                            <h2 class="text-base font-extrabold text-brand-navy flex items-center gap-2">
+                                <i data-lucide="shield-check" class="w-5 h-5 text-brand-blue"></i> Integrasi Deteksi Login SSO (Semua Aplikasi)
+                            </h2>
+                            <p class="text-[11px] text-brand-muted mt-0.5">Seluruh aplikasi Iframe otomatis menerima data siapa yang sedang login di My Alka melalui 3 jalur sekaligus.</p>
+                        </div>
+                        <button onclick="closeModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-brand-muted">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-3 max-h-[65vh] overflow-y-auto slider-scroll pr-1 text-[11.5px]">
+                        <div class="p-3 rounded-xl bg-blue-50/80 border border-blue-200">
+                            <p class="font-extrabold text-brand-navy mb-1">1. Jalur LocalStorage Otomatis (Domain digitech-labs.github.io)</p>
+                            <p class="text-[10.5px] text-brand-muted mb-1.5">Aplikasi anak dapat langsung membaca identitas pengguna yang login kapan saja:</p>
+                            <pre class="bg-slate-900 text-sky-300 p-2.5 rounded-lg text-[10px] overflow-x-auto font-mono">const sso = JSON.parse(localStorage.getItem('ALKA_SSO_AUTH') || '{}');
+console.log(sso.user.name, sso.role, sso.isAdmin, sso.isSuperAdmin);</pre>
+                        </div>
+                        <div class="p-3 rounded-xl bg-indigo-50/80 border border-indigo-200">
+                            <p class="font-extrabold text-brand-navy mb-1">2. Jalur PostMessage Realtime (Cross-Domain & Iframe)</p>
+                            <pre class="bg-slate-900 text-emerald-300 p-2.5 rounded-lg text-[10px] overflow-x-auto font-mono">window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'ALKA_SSO_AUTH') {
+    const { isLoggedIn, isAdmin, isSuperAdmin, user } = e.data;
+    // Gunakan user.name, user.nik, user.waliKelas, user.kelas, dll.
+  }
+});
+window.parent.postMessage({ type: 'ALKA_REQUEST_SSO' }, '*');</pre>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <p class="font-extrabold text-brand-navy mb-1">3. Data Sesi Aktif Saat Ini yang Dikirim ke Aplikasi:</p>
+                            <pre class="bg-slate-900 text-amber-300 p-2.5 rounded-lg text-[10px] overflow-x-auto font-mono">${JSON.stringify(samplePayload, null, 2)}</pre>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-3 pt-2.5 border-t border-slate-200">
+                        <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-extrabold">Tutup</button>
+                    </div>
+                </div>
+            `;
+            window.openModal(html);
+        };
 
         // ============================================================================
         // LOGIN & FIRST-TIME MANDATORY PASSWORD CHANGE ENGINE
@@ -2719,6 +2923,7 @@ self.addEventListener('sync', (event) => {
             window.state.forcePasswordChange = false;
             window.state.pendingLoginAccount = null;
             window.saveSessionToStorage();
+            window.syncSsoStorageBridge();
             window.showToast('Anda telah keluar dari sesi.', 'log-out', 'text-orange-500');
             window.navigate('#home');
         };
@@ -2816,7 +3021,7 @@ self.addEventListener('sync', (event) => {
                 name: displayName,
                 role: role,
                 sourceType: sourceType,
-                adminApps: adminApps,
+                adminApps: role === 'Super Admin' ? window.DB.apps.map(a => String(a.id)) : adminApps,
                 avatar: matchedRecord.avatar || window.getUserAvatarUrl(displayName)
             };
 
@@ -2831,6 +3036,9 @@ self.addEventListener('sync', (event) => {
         };
 
         window.completeUserLogin = function(accountSession) {
+            if (accountSession.role === 'Super Admin' && Array.isArray(window.DB.apps)) {
+                accountSession.adminApps = window.DB.apps.map(a => String(a.id));
+            }
             window.state.user = accountSession;
             window.state.isLoggedIn = true;
             window.state.forcePasswordChange = false;
@@ -2838,6 +3046,7 @@ self.addEventListener('sync', (event) => {
             window.MBankingSecurity.lastActivityAt = Date.now();
             window.MBankingSecurity.minimizedAt = null;
             window.saveSessionToStorage();
+            window.syncSsoStorageBridge();
 
             const linkedUser = window.DB.users.find(u =>
                 String(u.id) === String(accountSession.id) ||
@@ -3352,7 +3561,11 @@ self.addEventListener('sync', (event) => {
             }
 
             let currentSection = 'apps';
-            if (window.state.path === '#edukasi' || (activeAppObj && activeAppObj.section === 'edukasi')) currentSection = 'edukasi';
+            if (window.state.path === '#edukasi' || (activeAppObj && String(activeAppObj.section || '').toLowerCase().trim() === 'edukasi')) {
+                currentSection = 'edukasi';
+            } else if (window.state.path === '#apps' || (activeAppObj && String(activeAppObj.section || '').toLowerCase().trim() !== 'edukasi')) {
+                currentSection = 'apps';
+            }
             
             const isAppView = window.state.path === '#apps' || window.state.path === '#edukasi' || isDirectApp;
             const profileName = window.state.isLoggedIn ? window.state.user.name : 'Assalamualaikum';
@@ -3363,23 +3576,33 @@ self.addEventListener('sync', (event) => {
                 const appSec = (String(a.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
                 return window.canUserSeeApp(a) && appSec === currentSection;
             });
+            const isSlider1Min = Boolean(window.state.slider1Minimized);
             const isSlider2Min = Boolean(window.state.slider2Minimized);
 
             let sidebarNav = visibleMenus.map(m => {
                 const isActiveMenu = window.state.path === m.hash || (m.hash === '#apps' && isAppView && currentSection === 'apps') || (m.hash === '#edukasi' && isAppView && currentSection === 'edukasi');
-                return `<a onclick="navigate('${m.hash}')" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] font-semibold text-[13px] transition-all cursor-pointer ${isActiveMenu ? 'bg-white shadow-sm text-brand-blue border border-white/60' : 'text-brand-muted hover:bg-white/40'}"><i data-lucide="${m.icon}" class="w-4 h-4"></i> ${m.name}</a>`;
+                if (isSlider1Min) {
+                    return `<a onclick="navigate('${m.hash}')" title="${m.name}" class="flex items-center justify-center w-10 h-10 mx-auto rounded-[12px] transition-all cursor-pointer ${isActiveMenu ? 'bg-white shadow-sm text-brand-blue border border-white/60 scale-105' : 'text-brand-muted hover:bg-white/40'}"><i data-lucide="${m.icon}" class="w-4 h-4 shrink-0"></i></a>`;
+                }
+                return `<a onclick="navigate('${m.hash}')" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] font-semibold text-[13px] transition-all cursor-pointer ${isActiveMenu ? 'bg-white shadow-sm text-brand-blue border border-white/60' : 'text-brand-muted hover:bg-white/40'}"><i data-lucide="${m.icon}" class="w-4 h-4 shrink-0"></i> <span class="truncate">${m.name}</span></a>`;
             }).join('');
 
-            // PINTASAN ADMIN DI SIDEBAR KIRI BAWAH (HANYA 1 TOMBOL PANEL ADMIN)
-            const sidebarAdminShortcuts = isAdminUser ? `
-                <div class="mt-auto p-2.5 border-t border-white/40 flex flex-col gap-1.5">
-                    <button onclick="navigate('#admin-dashboard')" class="flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] font-bold text-[12px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all w-full text-left">
-                        <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i> Panel Admin
+            const sidebarAdminShortcuts = isAdminUser ? (
+                isSlider1Min ? `
+                <div class="mt-auto p-2 border-t border-white/40 flex flex-col items-center">
+                    <button onclick="navigate('#admin-dashboard')" title="Panel Admin" class="flex items-center justify-center w-10 h-10 rounded-[12px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all">
+                        <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i>
                     </button>
                 </div>
-            ` : '';
+                ` : `
+                <div class="mt-auto p-2.5 border-t border-white/40 flex flex-col gap-1.5">
+                    <button onclick="navigate('#admin-dashboard')" class="flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] font-bold text-[12px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all w-full text-left">
+                        <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i> <span class="truncate">Panel Admin</span>
+                    </button>
+                </div>
+                `
+            ) : '';
             
-            // RENDER SLIDER 2 PERSIS SESUAI URUTAN & DATA DI SUPABASE (TANPA PENGELOMPOKAN KATEGORI LAMA)
             let appListHTML = '';
             if (isSlider2Min) {
                 visibleApps.forEach(app => {
@@ -3420,7 +3643,26 @@ self.addEventListener('sync', (event) => {
 
             return `
             <div class="flex h-[100dvh] w-full overflow-hidden relative">
-                ${!isMobile ? `<aside class="w-[180px] shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-3.5 cursor-pointer" onclick="navigate('#home')">${macOsDotsHtml}<div class="flex items-center gap-2 min-w-0"><div class="w-8 h-8 shrink-0">${logoSvg}</div><span class="text-[14px] font-extrabold text-brand-navy tracking-tight truncate">My Alka</span></div></div><nav class="flex flex-col gap-1.5 w-full p-2.5">${sidebarNav}</nav>${sidebarAdminShortcuts}</aside>` : ''}
+                ${!isMobile ? `
+                <aside class="${isSlider1Min ? 'w-[64px]' : 'w-[185px]'} shrink-0 bg-white/20 border-r border-white/40 backdrop-blur-3xl z-40 relative flex flex-col transition-all duration-300">
+                    ${isSlider1Min ? `
+                    <div class="h-[60px] flex items-center justify-center px-1.5 border-b border-white/20 shrink-0">
+                        <div class="w-8 h-8 shrink-0 cursor-pointer" onclick="navigate('#home')" title="My Alka - Beranda">${logoSvg}</div>
+                    </div>
+                    ` : `
+                    <div class="h-[60px] flex items-center justify-between gap-1.5 px-3 shrink-0">
+                        <div class="flex items-center gap-2 min-w-0 cursor-pointer" onclick="navigate('#home')">
+                            ${macOsDotsHtml}
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <div class="w-7 h-7 shrink-0">${logoSvg}</div>
+                                <span class="text-[13.5px] font-extrabold text-brand-navy tracking-tight truncate">My Alka</span>
+                            </div>
+                        </div>
+                    </div>
+                    `}
+                    <nav class="flex flex-col gap-1.5 w-full ${isSlider1Min ? 'p-2' : 'p-2.5'}">${sidebarNav}</nav>
+                    ${sidebarAdminShortcuts}
+                </aside>` : ''}
                 
                 <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full ${isMobile && !isDirectApp && window.state.path !== '#login' ? 'pb-[70px]' : ''}">
                     ${isMobile ? `
@@ -3548,16 +3790,15 @@ self.addEventListener('sync', (event) => {
 
                     if (String(window.state.editingAppId) === String(app.id)) {
                         const colorOptions = AVAILABLE_COLORS.map(c => `<option value="${c.id}" ${app.color === c.text ? 'selected' : ''}>${c.id.charAt(0).toUpperCase() + c.id.slice(1)}</option>`).join('');
+                        const lockedSection = (String(app.section || '').toLowerCase().trim() === 'edukasi') ? 'edukasi' : 'apps';
                         return `<tr class="border-b border-white/30 bg-white/60">
                             <td class="py-2.5 px-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-white flex items-center justify-center shadow-sm"><i data-lucide="${app.icon}" class="w-3 h-3 text-brand-navy"></i></div><input type="text" id="editAppIcon-${app.id}" value="${app.icon}" class="input-glass w-20 px-1.5"></div></td>
                             <td class="py-2.5 px-3">
+                                <input type="hidden" id="editAppSection-${app.id}" value="${lockedSection}">
                                 <input type="text" id="editAppName-${app.id}" value="${app.name}" placeholder="Nama Aplikasi" class="input-glass font-bold w-full min-w-[120px] mb-1">
-                                <div class="flex gap-1">
+                                <div class="flex items-center gap-1.5">
                                     <input type="text" id="editAppCat-${app.id}" value="${app.cat || ''}" placeholder="Kategori" class="input-glass text-[10px] p-1 flex-1">
-                                    <select id="editAppSection-${app.id}" class="input-glass text-[10px] p-1 w-28">
-                                        <option value="apps" ${app.section !== 'edukasi' ? 'selected' : ''}>Aplikasi Utama</option>
-                                        <option value="edukasi" ${app.section === 'edukasi' ? 'selected' : ''}>Karya & Edukasi</option>
-                                    </select>
+                                    <span class="text-[9.5px] font-extrabold px-2 py-1 rounded ${lockedSection === 'edukasi' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'} shrink-0">${lockedSection === 'edukasi' ? 'Menu Edukasi' : 'Menu Aplikasi'}</span>
                                 </div>
                             </td>
                             <td class="py-2.5 px-3"><input type="url" id="editAppUrl-${app.id}" value="${app.url}" class="input-glass text-[11px] w-full min-w-[180px]"></td>
@@ -4385,7 +4626,7 @@ self.addEventListener('sync', (event) => {
                         <div class="flex items-center gap-1.5">
                             <button onclick="changeSiswaPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand-navy hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none">Sebelumnya</button>
                             <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-brand-blue border border-blue-200">Hal ${currentPage} / ${totalPages}</span>
-                            <button onclick="changeSiswaPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand-navy hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"> Berikutnya</button>
+                            <button onclick="changeSiswaPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-brand-navy hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none">Berikutnya</button>
                         </div>
                     </div>
                 </div>
@@ -4395,6 +4636,73 @@ self.addEventListener('sync', (event) => {
         window.renderAdminLogs = function() {
             const rows = window.DB.logs.map(l => `<div class="flex items-start gap-3.5 p-3.5 border-b border-white/30 hover:bg-white/30 transition-colors"><div class="w-9 h-9 rounded-full bg-${l.color}-100 flex items-center justify-center border border-white shrink-0"><i data-lucide="activity" class="w-4 h-4 text-${l.color}-500"></i></div><div class="flex-1 min-w-0"><h4 class="text-[12px] font-bold text-brand-navy leading-tight">${l.action} <span class="text-brand-blue">${l.target}</span></h4><div class="flex items-center gap-2.5 mt-1"><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${l.user}</span><span class="text-[9px] font-bold text-brand-muted flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${l.time}</span><span class="text-[9px] font-bold px-1.5 py-0.5 bg-white/60 border border-white rounded text-brand-muted ml-auto">${l.type}</span></div></div></div>`).join('');
             return `<div class="p-4 md:p-6 w-full h-full flex flex-col box-border animate-fade"><div class="glass-panel p-4 rounded-[20px] mb-5 shrink-0"><h1 class="text-[18px] font-extrabold text-brand-navy">Log Aktivitas</h1><p class="text-[11px] text-brand-muted mt-0.5">Riwayat tindakan penting di sistem.</p></div><div class="glass-panel rounded-[20px] flex-1 overflow-y-auto slider-scroll p-1 w-full">${rows}</div></div>`;
+        };
+
+        window.captureScrollAndFocusState = function(containerEl) {
+            if (!containerEl) return null;
+            const scrollPositions = [];
+            const scrollables = containerEl.querySelectorAll('.overflow-y-auto, .overflow-x-auto, .slider-scroll');
+            scrollables.forEach((el, idx) => {
+                scrollPositions.push({
+                    idx: idx,
+                    top: el.scrollTop,
+                    left: el.scrollLeft
+                });
+            });
+
+            let activeInputState = null;
+            const activeEl = document.activeElement;
+            if (activeEl && containerEl.contains(activeEl) && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+                const allInputs = Array.from(containerEl.querySelectorAll('input, textarea, select'));
+                activeInputState = {
+                    id: activeEl.id || '',
+                    placeholder: activeEl.getAttribute('placeholder') || '',
+                    inputIdx: allInputs.indexOf(activeEl),
+                    selStart: typeof activeEl.selectionStart === 'number' ? activeEl.selectionStart : null,
+                    selEnd: typeof activeEl.selectionEnd === 'number' ? activeEl.selectionEnd : null
+                };
+            }
+
+            return {
+                path: window.state.path,
+                mainTop: containerEl.scrollTop,
+                mainLeft: containerEl.scrollLeft,
+                scrollPositions: scrollPositions,
+                activeInputState: activeInputState
+            };
+        };
+
+        window.restoreScrollAndFocusState = function(containerEl, snapshot) {
+            if (!containerEl || !snapshot || snapshot.path !== window.state.path) return;
+            containerEl.scrollTop = snapshot.mainTop || 0;
+            containerEl.scrollLeft = snapshot.mainLeft || 0;
+
+            const scrollables = containerEl.querySelectorAll('.overflow-y-auto, .overflow-x-auto, .slider-scroll');
+            snapshot.scrollPositions.forEach(saved => {
+                const target = scrollables[saved.idx];
+                if (target) {
+                    target.scrollTop = saved.top;
+                    target.scrollLeft = saved.left;
+                }
+            });
+
+            if (snapshot.activeInputState) {
+                const info = snapshot.activeInputState;
+                let targetInput = info.id ? document.getElementById(info.id) : null;
+                if (!targetInput && info.placeholder) {
+                    targetInput = containerEl.querySelector('input[placeholder="' + info.placeholder + '"]');
+                }
+                if (!targetInput && info.inputIdx >= 0) {
+                    const allInputs = containerEl.querySelectorAll('input, textarea, select');
+                    targetInput = allInputs[info.inputIdx] || null;
+                }
+                if (targetInput) {
+                    targetInput.focus({ preventScroll: true });
+                    if (info.selStart !== null && typeof targetInput.setSelectionRange === 'function') {
+                        try { targetInput.setSelectionRange(info.selStart, info.selEnd); } catch (e) {}
+                    }
+                }
+            }
         };
 
         window.render = function() {
@@ -4421,7 +4729,10 @@ self.addEventListener('sync', (event) => {
                 }
                 const existingShell = document.getElementById('admin-shell-layout');
                 if (existingShell && existingShell.dataset.mobile === String(isMobile)) {
-                    document.getElementById('admin-main-content').innerHTML = adminContent;
+                    const mainContentEl = document.getElementById('admin-main-content');
+                    const snapshot = window.captureScrollAndFocusState(mainContentEl);
+                    mainContentEl.innerHTML = adminContent;
+                    window.restoreScrollAndFocusState(mainContentEl, snapshot);
                     if (!isMobile) {
                         const sidebarLinks = document.getElementById('admin-sidebar-links');
                         if (sidebarLinks) sidebarLinks.innerHTML = window.getAdminSidebarLinks();
@@ -4434,7 +4745,9 @@ self.addEventListener('sync', (event) => {
                     root.innerHTML = `<div id="admin-shell-layout" data-mobile="${isMobile}" class="flex h-[100dvh] w-full overflow-hidden relative">${!isMobile ? `<aside class="w-[200px] shrink-0 bg-white/30 border-r border-white/50 backdrop-blur-3xl z-40 flex flex-col"><div class="h-[60px] flex items-center gap-2.5 px-3.5 border-b border-white/40 cursor-pointer" onclick="navigate('#home')">${macOsDotsHtml}<div class="flex items-center gap-2 min-w-0"><div class="w-8 h-8 shrink-0">${logoSvg}</div><div class="flex flex-col min-w-0"><span class="text-[13.5px] font-extrabold text-brand-navy leading-none truncate">My Alka</span><span class="text-[8.5px] font-bold text-brand-blue uppercase tracking-wider mt-1">Admin Panel</span></div></div></div><nav id="admin-sidebar-links" class="flex flex-col gap-1.5 p-3">${window.getAdminSidebarLinks()}</nav></aside>` : ''}<div class="flex-1 flex flex-col h-full relative w-full overflow-hidden ${isMobile ? 'pb-[70px]' : ''}"><header class="h-[56px] md:h-[60px] flex items-center justify-between px-4 md:px-6 shrink-0 z-30 bg-white/20 backdrop-blur-md border-b border-white/40 w-full"><div class="flex items-center gap-2 font-bold text-brand-navy text-[14px] md:hidden">${macOsDotsHtml}<span>Admin Panel</span></div><div class="flex items-center gap-3 ml-auto relative"><button onclick="navigate('#home')" class="glass-pill px-3 py-1.5 rounded-full text-[11px] font-bold text-brand-navy flex items-center gap-1.5 hover:bg-white shadow-sm mr-1"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Lihat Portal</button><div class="w-7 h-7 rounded-full border border-white shadow-sm bg-blue-100 overflow-hidden"><img src="${uAvatar}" class="w-full h-full object-cover"></div><span class="text-[11px] font-bold text-brand-navy hidden md:block">${window.state.user.name}</span></div></header><main id="admin-main-content" class="flex-1 overflow-hidden relative w-full">${adminContent}</main></div>${isMobile ? `<nav id="admin-mobile-links" class="bottom-nav border-t border-white/80 bg-white/80">${window.getAdminMobileNavLinks()}</nav>` : ''}</div>`;
                 }
             } else {
+                const snapshot = window.captureScrollAndFocusState(root);
                 root.innerHTML = window.renderPortalLayout(isMobile);
+                window.restoreScrollAndFocusState(root, snapshot);
             }
             window.renderPwaFloatingBanner();
             setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
